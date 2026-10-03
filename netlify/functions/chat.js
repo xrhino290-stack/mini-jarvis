@@ -1,6 +1,7 @@
-// Netlify Function (Gemini free tier): API key sirf yahan (server side) rehti hai.
+// Netlify Function (Gemini free tier) with auto-retry + fallback models
 const SYSTEM = `Tum Jarvis ho, ek helpful voice assistant.
 Hamesha Hinglish (Hindi + English, Roman script) me jawab do.
+User ka text voice se aata hai, to kabhi Devanagari me ya galat spelling me ho sakta hai. Matlab samajh kar jawab do.
 Jawab chhote rakho (max 2-3 sentences) kyunki ye bol kar sunaya jayega.
 Markdown, emoji ya lists mat use karo. Dost jaisa, polite tone rakho.`;
 
@@ -9,6 +10,31 @@ const json = (statusCode, body) => ({
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
 });
+
+const FALLBACKS = (process.env.JARVIS_FALLBACKS || "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.6-flash")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+const RETRY_STATUS = [429, 500, 503, 504];
+const BUDGET_MS = 8500; // Netlify function ki 10s limit se pehle ruk jao
+
+async function callModel(model, key, body, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Sirf POST allowed hai" });
@@ -32,29 +58,31 @@ exports.handler = async (event) => {
       parts: [{ text: m.content.slice(0, 1000) }],
     }));
 
-  const model = process.env.JARVIS_MODEL || "gemini-2.5-flash";
-  const generationConfig = { maxOutputTokens: 400 };
-  if (model.startsWith("gemini-2.5")) generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  const body = {
+    system_instruction: { parts: [{ text: SYSTEM }] },
+    contents,
+    generationConfig: { maxOutputTokens: 800 },
+  };
 
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM }] },
-          contents,
-          generationConfig,
-        }),
+  const primary = process.env.JARVIS_MODEL || "gemini-3.8-flash";
+  const models = [...new Set([primary, ...FALLBACKS])];
+  const start = Date.now();
+
+  for (const model of models) {
+    const remaining = BUDGET_MS - (Date.now() - start);
+    if (remaining < 1500) break;
+    try {
+      const { res, data } = await callModel(model, key, body, Math.min(remaining, 4500));
+      if (res.ok) {
+        const reply = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
+        if (reply) return json(200, { reply });
+        continue; // khali jawab aaya, agla model try karo
       }
-    );
-    const data = await res.json();
-    if (res.status === 429) return json(429, { error: "Free limit khatam ho gayi, thodi der baad try karo." });
-    if (!res.ok) return json(res.status, { error: data?.error?.message || "API error" });
-    const reply = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
-    return json(200, { reply: reply || "Maaf karna, jawab nahi mila. Dobara bolo." });
-  } catch (e) {
-    return json(500, { error: "Server error: " + e.message });
+      if (RETRY_STATUS.includes(res.status) || res.status === 404) continue;
+      return json(res.status, { error: data?.error?.message || "API error" });
+    } catch (e) {
+      continue; // timeout ya network error, agla model try karo
+    }
   }
+  return json(503, { error: "Google ke server pe abhi bheed hai. 1 minute baad dobara bolo." });
 };
