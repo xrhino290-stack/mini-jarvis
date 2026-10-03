@@ -220,7 +220,7 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null, listening = false;
 if (SR) {
   rec = new SR();
-  rec.lang = "hi-IN";
+  rec.lang = "en-IN";
   rec.interimResults = false;
   rec.onresult = (e) => send(e.results[0][0].transcript);
   rec.onerror = (e) => {
