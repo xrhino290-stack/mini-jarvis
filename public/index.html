@@ -31,6 +31,16 @@ button#orb:focus-visible{outline:2px solid var(--amber);outline-offset:6px}
 [data-state=listening] .core{animation:pulse .9s ease-in-out infinite alternate}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulse{to{transform:scale(1.35)}}
+details{margin:0 0 10px;color:var(--dim);font-size:.88rem}
+summary{cursor:pointer;padding:6px 0}
+summary:focus-visible{outline:2px solid var(--cyan)}
+.set{display:grid;gap:12px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--ink)}
+.set label{display:grid;gap:6px}
+select{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit}
+select:focus-visible{outline:2px solid var(--cyan)}
+input[type=range]{width:100%;accent-color:var(--cyan)}
+.set button{justify-self:start;background:var(--cyan);color:#022;border:0;border-radius:10px;padding:9px 16px;font:inherit;font-weight:600;cursor:pointer}
+.set button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 #log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px}
 .msg{max-width:85%;padding:10px 14px;border-radius:14px;line-height:1.45;font-size:.97rem;overflow-wrap:anywhere}
 .me{align-self:flex-end;background:#12385a}
@@ -38,8 +48,8 @@ button#orb:focus-visible{outline:2px solid var(--amber);outline-offset:6px}
 .err{align-self:center;color:#ff8a8a;font-size:.88rem}
 .msg a{color:var(--cyan)}
 form{display:flex;gap:8px;margin-top:12px}
-input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:12px 14px;border-radius:12px;font:inherit}
-input:focus-visible{outline:2px solid var(--cyan)}
+#text{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:12px 14px;border-radius:12px;font:inherit}
+#text:focus-visible{outline:2px solid var(--cyan)}
 form button{background:var(--cyan);color:#022;border:0;border-radius:12px;padding:0 18px;font:inherit;font-weight:600;cursor:pointer}
 form button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
@@ -51,6 +61,21 @@ form button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
   <div class="orb-wrap">
     <button id="orb" aria-label="Mic on/off karo"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span><span class="core"></span></button>
   </div>
+  <details>
+    <summary>Awaaz settings</summary>
+    <div class="set">
+      <label>Voice
+        <select id="voice"><option value="">Auto (Hindi pehle)</option></select>
+      </label>
+      <label>Speed: <span id="rateVal">1.0</span>
+        <input type="range" id="rate" min="0.6" max="1.6" step="0.1" value="1">
+      </label>
+      <label>Pitch: <span id="pitchVal">1.0</span>
+        <input type="range" id="pitch" min="0.5" max="1.5" step="0.1" value="1">
+      </label>
+      <button type="button" id="testVoice">Awaaz sunao</button>
+    </div>
+  </details>
   <div id="log" aria-live="polite"></div>
   <form id="form"><input id="text" placeholder="Ya yahan type karo..." autocomplete="off"><button type="submit">Bhejo</button></form>
 </main>
@@ -59,6 +84,7 @@ const $ = (id) => document.getElementById(id);
 const log = $("log"), statusEl = $("status");
 let history = [];
 let busy = false;
+const HAS_TTS = "speechSynthesis" in window;
 
 function setState(s, label) {
   document.body.dataset.state = s;
@@ -73,18 +99,71 @@ function bubble(cls, text) {
   return d;
 }
 
+// ---- Voice settings (phone me yaad rehti hain) ----
+let prefs = { voice: "", rate: 1, pitch: 1 };
+try { prefs = Object.assign(prefs, JSON.parse(localStorage.getItem("jarvis-voice") || "{}")); } catch (e) {}
+function savePrefs() {
+  try { localStorage.setItem("jarvis-voice", JSON.stringify(prefs)); } catch (e) {}
+}
+const voiceSel = $("voice"), rateEl = $("rate"), pitchEl = $("pitch");
+rateEl.value = prefs.rate; pitchEl.value = prefs.pitch;
+$("rateVal").textContent = Number(prefs.rate).toFixed(1);
+$("pitchVal").textContent = Number(prefs.pitch).toFixed(1);
+
+function loadVoices() {
+  if (!HAS_TTS) return;
+  const list = speechSynthesis.getVoices()
+    .filter((v) => /^(hi|en)/i.test(v.lang))
+    .sort((a, b) => (a.lang.startsWith("hi") ? 0 : 1) - (b.lang.startsWith("hi") ? 0 : 1) || a.name.localeCompare(b.name));
+  voiceSel.innerHTML = "";
+  voiceSel.add(new Option("Auto (Hindi pehle)", ""));
+  list.forEach((v) => voiceSel.add(new Option(v.name + " (" + v.lang + ")", v.voiceURI)));
+  voiceSel.value = prefs.voice;
+  if (voiceSel.value !== prefs.voice) voiceSel.value = "";
+}
+if (HAS_TTS) {
+  speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+}
+
 // ---- Mouth: text to speech ----
+function pickVoice() {
+  const voices = speechSynthesis.getVoices();
+  const norm = (x) => x.lang.replace("_", "-");
+  return (
+    voices.find((x) => prefs.voice && x.voiceURI === prefs.voice) ||
+    voices.find((x) => norm(x) === "hi-IN") ||
+    voices.find((x) => norm(x) === "en-IN")
+  );
+}
 function speak(text) {
-  if (!("speechSynthesis" in window)) return setState("idle", "Tap karke bolo");
+  if (!HAS_TTS) return setState("idle", "Tap karke bolo");
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  const voices = speechSynthesis.getVoices();
-  const v = voices.find((x) => x.lang === "hi-IN") || voices.find((x) => x.lang === "en-IN");
+  const v = pickVoice();
   if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "hi-IN"; }
+  u.rate = Number(prefs.rate) || 1;
+  u.pitch = Number(prefs.pitch) || 1;
   u.onstart = () => setState("speaking", "Bol raha hoon...");
   u.onend = u.onerror = () => setState("idle", "Tap karke bolo");
   speechSynthesis.speak(u);
 }
+
+voiceSel.addEventListener("change", () => {
+  prefs.voice = voiceSel.value; savePrefs();
+  speak("Namaste, main Jarvis hoon.");
+});
+rateEl.addEventListener("input", () => { $("rateVal").textContent = Number(rateEl.value).toFixed(1); });
+pitchEl.addEventListener("input", () => { $("pitchVal").textContent = Number(pitchEl.value).toFixed(1); });
+rateEl.addEventListener("change", () => {
+  prefs.rate = Number(rateEl.value); savePrefs();
+  speak("Ye meri nayi speed hai.");
+});
+pitchEl.addEventListener("change", () => {
+  prefs.pitch = Number(pitchEl.value); savePrefs();
+  speak("Ye meri nayi awaaz hai.");
+});
+$("testVoice").addEventListener("click", () => speak("Namaste, main Jarvis hoon. Aapki seva me hazir."));
 
 // ---- Local commands (browser ke andar jo ho sakta hai) ----
 const COMMANDS = [
@@ -154,7 +233,7 @@ if (SR) {
 }
 $("orb").addEventListener("click", () => {
   if (!rec) return bubble("err", "Is browser me voice support nahi hai. Chrome use karo ya type karo.");
-  speechSynthesis.cancel();
+  if (HAS_TTS) speechSynthesis.cancel();
   if (listening) { rec.stop(); return; }
   listening = true;
   setState("listening", "Sun raha hoon...");
@@ -169,7 +248,6 @@ $("form").addEventListener("submit", (e) => {
 });
 
 bubble("ai", "Namaste! Main Jarvis hoon. Orb dabao aur bolo, ya neeche type karo.");
-speechSynthesis && speechSynthesis.getVoices();
 </script>
 </body>
-  </html>
+</html>
