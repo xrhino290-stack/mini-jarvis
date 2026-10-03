@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mini Jarvis</title>
+<link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#050b14">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
@@ -36,6 +40,7 @@ summary{cursor:pointer;padding:6px 0}
 summary:focus-visible{outline:2px solid var(--cyan)}
 .set{display:grid;gap:12px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--ink)}
 .set label{display:grid;gap:6px}
+.set small{color:var(--dim)}
 select{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit}
 select:focus-visible{outline:2px solid var(--cyan)}
 input[type=range]{width:100%;accent-color:var(--cyan)}
@@ -62,8 +67,10 @@ form button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
     <button id="orb" aria-label="Mic on/off karo"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span><span class="core"></span></button>
   </div>
   <details>
-    <summary>Awaaz settings</summary>
+    <summary>Settings</summary>
     <div class="set">
+      <button type="button" id="wakeBtn">Hey Jarvis mode: Off</button>
+      <small>On karne par "Jarvis, time kya hua" bolo. Page khula aur screen on rakhni padegi, battery zyada lagti hai.</small>
       <label>Voice
         <select id="voice"><option value="">Auto (Hindi pehle)</option></select>
       </label>
@@ -82,9 +89,9 @@ form button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 <script>
 const $ = (id) => document.getElementById(id);
 const log = $("log"), statusEl = $("status");
-let history = [];
-let busy = false;
+let history = [], busy = false, wakeOn = false;
 const HAS_TTS = "speechSynthesis" in window;
+const idle = () => (wakeOn ? "Hey Jarvis bolo..." : "Tap karke bolo");
 
 function setState(s, label) {
   document.body.dataset.state = s;
@@ -99,12 +106,10 @@ function bubble(cls, text) {
   return d;
 }
 
-// ---- Voice settings (phone me yaad rehti hain) ----
+// ---- Voice settings ----
 let prefs = { voice: "", rate: 1, pitch: 1 };
 try { prefs = Object.assign(prefs, JSON.parse(localStorage.getItem("jarvis-voice") || "{}")); } catch (e) {}
-function savePrefs() {
-  try { localStorage.setItem("jarvis-voice", JSON.stringify(prefs)); } catch (e) {}
-}
+const savePrefs = () => { try { localStorage.setItem("jarvis-voice", JSON.stringify(prefs)); } catch (e) {} };
 const voiceSel = $("voice"), rateEl = $("rate"), pitchEl = $("pitch");
 rateEl.value = prefs.rate; pitchEl.value = prefs.pitch;
 $("rateVal").textContent = Number(prefs.rate).toFixed(1);
@@ -121,23 +126,16 @@ function loadVoices() {
   voiceSel.value = prefs.voice;
   if (voiceSel.value !== prefs.voice) voiceSel.value = "";
 }
-if (HAS_TTS) {
-  speechSynthesis.onvoiceschanged = loadVoices;
-  loadVoices();
-}
+if (HAS_TTS) { speechSynthesis.onvoiceschanged = loadVoices; loadVoices(); }
 
-// ---- Mouth: text to speech ----
 function pickVoice() {
   const voices = speechSynthesis.getVoices();
   const norm = (x) => x.lang.replace("_", "-");
-  return (
-    voices.find((x) => prefs.voice && x.voiceURI === prefs.voice) ||
-    voices.find((x) => norm(x) === "hi-IN") ||
-    voices.find((x) => norm(x) === "en-IN")
-  );
+  return voices.find((x) => prefs.voice && x.voiceURI === prefs.voice) ||
+    voices.find((x) => norm(x) === "hi-IN") || voices.find((x) => norm(x) === "en-IN");
 }
 function speak(text) {
-  if (!HAS_TTS) return setState("idle", "Tap karke bolo");
+  if (!HAS_TTS) return setState("idle", idle());
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   const v = pickVoice();
@@ -145,53 +143,73 @@ function speak(text) {
   u.rate = Number(prefs.rate) || 1;
   u.pitch = Number(prefs.pitch) || 1;
   u.onstart = () => setState("speaking", "Bol raha hoon...");
-  u.onend = u.onerror = () => setState("idle", "Tap karke bolo");
+  u.onend = u.onerror = () => setState("idle", idle());
   speechSynthesis.speak(u);
 }
-
-voiceSel.addEventListener("change", () => {
-  prefs.voice = voiceSel.value; savePrefs();
-  speak("Namaste, main Jarvis hoon.");
-});
+voiceSel.addEventListener("change", () => { prefs.voice = voiceSel.value; savePrefs(); speak("Namaste, main Jarvis hoon."); });
 rateEl.addEventListener("input", () => { $("rateVal").textContent = Number(rateEl.value).toFixed(1); });
 pitchEl.addEventListener("input", () => { $("pitchVal").textContent = Number(pitchEl.value).toFixed(1); });
-rateEl.addEventListener("change", () => {
-  prefs.rate = Number(rateEl.value); savePrefs();
-  speak("Ye meri nayi speed hai.");
-});
-pitchEl.addEventListener("change", () => {
-  prefs.pitch = Number(pitchEl.value); savePrefs();
-  speak("Ye meri nayi awaaz hai.");
-});
+rateEl.addEventListener("change", () => { prefs.rate = Number(rateEl.value); savePrefs(); speak("Ye meri nayi speed hai."); });
+pitchEl.addEventListener("change", () => { prefs.pitch = Number(pitchEl.value); savePrefs(); speak("Ye meri nayi awaaz hai."); });
 $("testVoice").addEventListener("click", () => speak("Namaste, main Jarvis hoon. Aapki seva me hazir."));
 
-// ---- Local commands (browser ke andar jo ho sakta hai) ----
-const COMMANDS = [
-  { re: /youtube/i, url: "https://www.youtube.com", say: "YouTube khol raha hoon." },
-  { re: /google/i, url: "https://www.google.com", say: "Google khol raha hoon." },
-  { re: /(gmail|mail)/i, url: "https://mail.google.com", say: "Gmail khol raha hoon." },
-];
-function localCommand(t) {
-  if (!/(khol|open|chalu|start)/i.test(t)) return null;
-  return COMMANDS.find((c) => c.re.test(t)) || null;
+// ---- Notes (phone me save hote hain) ----
+const getNotes = () => { try { return JSON.parse(localStorage.getItem("jarvis-notes") || "[]"); } catch (e) { return []; } };
+const setNotes = (n) => { try { localStorage.setItem("jarvis-notes", JSON.stringify(n)); } catch (e) {} };
+
+// ---- Local commands ----
+const enc = encodeURIComponent;
+const clean = (t, words) => t.replace(new RegExp("\\b(" + words + ")\\b", "g"), " ").replace(/\s+/g, " ").trim();
+function localCommand(raw) {
+  const t = raw.toLowerCase().trim();
+  let m;
+  if ((m = t.match(/(?:note karo|note kar|note likho|yaad rakho)[:,]?\s*(.+)/))) {
+    const n = getNotes(); n.push(m[1]); setNotes(n);
+    return { say: "Note kar liya: " + m[1] };
+  }
+  if (/(mere notes|notes sunao|notes dikhao|read notes)/.test(t)) {
+    const n = getNotes();
+    return { say: n.length ? "Aapke notes: " + n.map((x, i) => (i + 1) + ". " + x).join(". ") : "Abhi koi note nahi hai." };
+  }
+  if (/notes?\s*(delete|clear|hata|mita)/.test(t)) { setNotes([]); return { say: "Saare notes hata diye." }; }
+  if (/(time|samay|waqt|baje)/.test(t) && /(kya|what|kitne|batao|tell)/.test(t))
+    return { say: "Abhi " + new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }) + " hua hai." };
+  if (/(date|tarikh|tareekh|aaj kaun|din kaun)/.test(t))
+    return { say: "Aaj " + new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + " hai." };
+  if (/(search|dhundo|khojo)/.test(t)) {
+    const yt = /youtube/.test(t);
+    const q = clean(t, "google|youtube|pe|par|me|mein|ko|search|karo|kar|dhundo|khojo|for");
+    if (q) return { say: q + " search kar raha hoon.", url: yt ? "https://www.youtube.com/results?search_query=" + enc(q) : "https://www.google.com/search?q=" + enc(q) };
+  }
+  if (/\b(maps?|rasta|navigate|directions?)\b/.test(t)) {
+    const q = clean(t, "map|maps|rasta|ka|ki|ke|batao|dikhao|navigate|directions?|kholo|open|karo|kar|pe|par");
+    return { say: q ? q + " ka rasta khol raha hoon." : "Maps khol raha hoon.", url: q ? "https://www.google.com/maps/search/?api=1&query=" + enc(q) : "https://www.google.com/maps" };
+  }
+  if (/(khol|open|chalu|start)/.test(t)) {
+    if (/youtube/.test(t)) return { say: "YouTube khol raha hoon.", url: "https://www.youtube.com" };
+    if (/whatsapp/.test(t)) return { say: "WhatsApp khol raha hoon.", url: "whatsapp://send" };
+    if (/(gmail|mail)/.test(t)) return { say: "Gmail khol raha hoon.", url: "https://mail.google.com" };
+    if (/google/.test(t)) return { say: "Google khol raha hoon.", url: "https://www.google.com" };
+  }
+  return null;
 }
 
-// ---- Brain: Netlify Function ----
+// ---- Brain ----
 async function send(text) {
   text = text.trim();
   if (!text || busy) return;
   bubble("me", text);
-
   const cmd = localCommand(text);
   if (cmd) {
     const d = bubble("ai", cmd.say + " ");
-    const a = document.createElement("a");
-    a.href = cmd.url; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Link";
-    d.appendChild(a);
-    window.open(cmd.url, "_blank", "noopener");
+    if (cmd.url) {
+      const a = document.createElement("a");
+      a.href = cmd.url; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Link";
+      d.appendChild(a);
+      window.open(cmd.url, "_blank", "noopener");
+    }
     return speak(cmd.say);
   }
-
   busy = true;
   history.push({ role: "user", content: text });
   setState("thinking", "Soch raha hoon...");
@@ -209,15 +227,15 @@ async function send(text) {
   } catch (e) {
     history.pop();
     bubble("err", e.message);
-    setState("idle", "Tap karke bolo");
+    setState("idle", idle());
   } finally {
     busy = false;
   }
 }
 
-// ---- Ears: speech to text ----
+// ---- Ears ----
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null, listening = false;
+let rec = null, listening = false, wake = null, expect = false;
 if (SR) {
   rec = new SR();
   rec.lang = "en-IN";
@@ -225,15 +243,53 @@ if (SR) {
   rec.onresult = (e) => send(e.results[0][0].transcript);
   rec.onerror = (e) => {
     listening = false;
-    setState("idle", "Tap karke bolo");
-    const msg = e.error === "not-allowed" ? "Mic permission allow karo." : e.error === "no-speech" ? "Kuch sunai nahi diya, dobara try karo." : "Mic error: " + e.error;
-    bubble("err", msg);
+    setState("idle", idle());
+    bubble("err", e.error === "not-allowed" ? "Mic permission allow karo." : e.error === "no-speech" ? "Kuch sunai nahi diya, dobara try karo." : "Mic error: " + e.error);
   };
-  rec.onend = () => { if (listening) { listening = false; if (!busy) setState("idle", "Tap karke bolo"); } };
+  rec.onend = () => { if (listening) { listening = false; if (!busy) setState("idle", idle()); } };
 }
+
+// ---- Hey Jarvis mode ----
+const wakeBtn = $("wakeBtn");
+const showWake = () => { wakeBtn.textContent = "Hey Jarvis mode: " + (wakeOn ? "On" : "Off"); };
+function startWake() {
+  if (!SR) return bubble("err", "Is browser me voice support nahi hai. Chrome use karo.");
+  wake = new SR();
+  wake.lang = "en-IN";
+  wake.continuous = true;
+  wake.interimResults = false;
+  wake.onresult = (e) => {
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (!e.results[i].isFinal || busy || document.body.dataset.state === "speaking") continue;
+      const t = e.results[i][0].transcript.trim();
+      const m = t.match(/(?:jarvis|jarwis|harvis|garvis|jarvi[sz])[\s,.!?]*(.*)$/i);
+      if (m) {
+        if (m[1].trim()) send(m[1]);
+        else { expect = true; speak("Ji boliye."); }
+      } else if (expect) { expect = false; send(t); }
+    }
+  };
+  wake.onend = () => { if (wakeOn) setTimeout(() => { try { wake.start(); } catch (e) {} }, 400); };
+  wake.onerror = (e) => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") { stopWake(); bubble("err", "Mic permission allow karo."); }
+  };
+  wakeOn = true;
+  try { wake.start(); } catch (e) {}
+  showWake();
+  setState("idle", idle());
+}
+function stopWake() {
+  wakeOn = false; expect = false;
+  try { wake && wake.stop(); } catch (e) {}
+  showWake();
+  setState("idle", idle());
+}
+wakeBtn.addEventListener("click", () => (wakeOn ? stopWake() : startWake()));
+
 $("orb").addEventListener("click", () => {
   if (!rec) return bubble("err", "Is browser me voice support nahi hai. Chrome use karo ya type karo.");
   if (HAS_TTS) speechSynthesis.cancel();
+  if (wakeOn) return stopWake();
   if (listening) { rec.stop(); return; }
   listening = true;
   setState("listening", "Sun raha hoon...");
@@ -250,4 +306,4 @@ $("form").addEventListener("submit", (e) => {
 bubble("ai", "Namaste! Main Jarvis hoon. Orb dabao aur bolo, ya neeche type karo.");
 </script>
 </body>
-</html>
+  </html>
