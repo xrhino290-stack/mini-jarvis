@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini Jarvis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050b14;--panel:#0b1626;--ink:#d6f3ff;--dim:#6f8ca3;--cyan:#2ee6ff;--amber:#ffb347;--line:#16314a}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(circle at 50% 28%,#0a2038,var(--bg) 60%);color:var(--ink);font-family:"Chakra Petch",system-ui,sans-serif;display:flex;flex-direction:column;align-items:center}
+main{width:100%;max-width:640px;height:100%;display:flex;flex-direction:column;padding:20px 16px 16px}
+h1{font-size:1.1rem;font-weight:600;margin:0;letter-spacing:.04em}
+header{display:flex;justify-content:space-between;align-items:center}
+#status{color:var(--dim);font-size:.85rem}
+.orb-wrap{display:grid;place-items:center;padding:26px 0 18px}
+button#orb{all:unset;cursor:pointer;width:150px;height:150px;border-radius:50%;position:relative;display:grid;place-items:center}
+button#orb:focus-visible{outline:2px solid var(--amber);outline-offset:6px}
+.ring{position:absolute;border-radius:50%;border:2px solid var(--cyan);opacity:.9}
+.r1{inset:0;border-style:dashed;border-color:var(--line);border-width:3px}
+.r2{inset:16px;border-color:var(--cyan);border-top-color:transparent;border-bottom-color:transparent}
+.r3{inset:38px;border-color:var(--cyan);opacity:.5}
+.core{width:44px;height:44px;border-radius:50%;background:var(--cyan);box-shadow:0 0 28px var(--cyan)}
+[data-state=listening] .core{background:var(--amber);box-shadow:0 0 36px var(--amber)}
+[data-state=listening] .r2,[data-state=listening] .r3{border-color:var(--amber)}
+[data-state=thinking] .r2{animation:spin 1s linear infinite}
+[data-state=speaking] .core{animation:pulse .5s ease-in-out infinite alternate}
+[data-state=listening] .core{animation:pulse .9s ease-in-out infinite alternate}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{to{transform:scale(1.35)}}
+#log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px}
+.msg{max-width:85%;padding:10px 14px;border-radius:14px;line-height:1.45;font-size:.97rem;overflow-wrap:anywhere}
+.me{align-self:flex-end;background:#12385a}
+.ai{align-self:flex-start;background:var(--panel);border:1px solid var(--line)}
+.err{align-self:center;color:#ff8a8a;font-size:.88rem}
+.msg a{color:var(--cyan)}
+form{display:flex;gap:8px;margin-top:12px}
+input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:12px 14px;border-radius:12px;font:inherit}
+input:focus-visible{outline:2px solid var(--cyan)}
+form button{background:var(--cyan);color:#022;border:0;border-radius:12px;padding:0 18px;font:inherit;font-weight:600;cursor:pointer}
+form button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body data-state="idle">
+<main>
+  <header><h1>Mini Jarvis</h1><span id="status">Tap karke bolo</span></header>
+  <div class="orb-wrap">
+    <button id="orb" aria-label="Mic on/off karo"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span><span class="core"></span></button>
+  </div>
+  <div id="log" aria-live="polite"></div>
+  <form id="form"><input id="text" placeholder="Ya yahan type karo..." autocomplete="off"><button type="submit">Bhejo</button></form>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const log = $("log"), statusEl = $("status");
+let history = [];
+let busy = false;
+
+function setState(s, label) {
+  document.body.dataset.state = s;
+  statusEl.textContent = label;
+}
+function bubble(cls, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  d.textContent = text;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+  return d;
+}
+
+// ---- Mouth: text to speech ----
+function speak(text) {
+  if (!("speechSynthesis" in window)) return setState("idle", "Tap karke bolo");
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const voices = speechSynthesis.getVoices();
+  const v = voices.find((x) => x.lang === "hi-IN") || voices.find((x) => x.lang === "en-IN");
+  if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "hi-IN"; }
+  u.onstart = () => setState("speaking", "Bol raha hoon...");
+  u.onend = u.onerror = () => setState("idle", "Tap karke bolo");
+  speechSynthesis.speak(u);
+}
+
+// ---- Local commands (browser ke andar jo ho sakta hai) ----
+const COMMANDS = [
+  { re: /youtube/i, url: "https://www.youtube.com", say: "YouTube khol raha hoon." },
+  { re: /google/i, url: "https://www.google.com", say: "Google khol raha hoon." },
+  { re: /(gmail|mail)/i, url: "https://mail.google.com", say: "Gmail khol raha hoon." },
+];
+function localCommand(t) {
+  if (!/(khol|open|chalu|start)/i.test(t)) return null;
+  return COMMANDS.find((c) => c.re.test(t)) || null;
+}
+
+// ---- Brain: Netlify Function ----
+async function send(text) {
+  text = text.trim();
+  if (!text || busy) return;
+  bubble("me", text);
+
+  const cmd = localCommand(text);
+  if (cmd) {
+    const d = bubble("ai", cmd.say + " ");
+    const a = document.createElement("a");
+    a.href = cmd.url; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Link";
+    d.appendChild(a);
+    window.open(cmd.url, "_blank", "noopener");
+    return speak(cmd.say);
+  }
+
+  busy = true;
+  history.push({ role: "user", content: text });
+  setState("thinking", "Soch raha hoon...");
+  try {
+    const res = await fetch("/.netlify/functions/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: history }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Kuch gadbad ho gayi");
+    history.push({ role: "assistant", content: data.reply });
+    bubble("ai", data.reply);
+    speak(data.reply);
+  } catch (e) {
+    history.pop();
+    bubble("err", e.message);
+    setState("idle", "Tap karke bolo");
+  } finally {
+    busy = false;
+  }
+}
+
+// ---- Ears: speech to text ----
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+if (SR) {
+  rec = new SR();
+  rec.lang = "hi-IN";
+  rec.interimResults = false;
+  rec.onresult = (e) => send(e.results[0][0].transcript);
+  rec.onerror = (e) => {
+    listening = false;
+    setState("idle", "Tap karke bolo");
+    const msg = e.error === "not-allowed" ? "Mic permission allow karo." : e.error === "no-speech" ? "Kuch sunai nahi diya, dobara try karo." : "Mic error: " + e.error;
+    bubble("err", msg);
+  };
+  rec.onend = () => { if (listening) { listening = false; if (!busy) setState("idle", "Tap karke bolo"); } };
+}
+$("orb").addEventListener("click", () => {
+  if (!rec) return bubble("err", "Is browser me voice support nahi hai. Chrome use karo ya type karo.");
+  speechSynthesis.cancel();
+  if (listening) { rec.stop(); return; }
+  listening = true;
+  setState("listening", "Sun raha hoon...");
+  rec.start();
+});
+
+$("form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const i = $("text");
+  send(i.value);
+  i.value = "";
+});
+
+bubble("ai", "Namaste! Main Jarvis hoon. Orb dabao aur bolo, ya neeche type karo.");
+speechSynthesis && speechSynthesis.getVoices();
+</script>
+</body>
+  </html>
