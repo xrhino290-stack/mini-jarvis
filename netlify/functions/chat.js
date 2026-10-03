@@ -14,7 +14,7 @@ const json = (statusCode, body) => ({
 const FALLBACKS = (process.env.JARVIS_FALLBACKS || "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.6-flash")
   .split(",").map((s) => s.trim()).filter(Boolean);
 const RETRY_STATUS = [429, 500, 503, 504];
-const BUDGET_MS = 8500; // Netlify function ki 10s limit se pehle ruk jao
+const BUDGET_MS = 8500;
 
 async function callModel(model, key, body, ms) {
   const ctrl = new AbortController();
@@ -76,12 +76,12 @@ exports.handler = async (event) => {
       if (res.ok) {
         const reply = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
         if (reply) return json(200, { reply });
-        continue; // khali jawab aaya, agla model try karo
+        continue;
       }
       if (RETRY_STATUS.includes(res.status) || res.status === 404) continue;
       return json(res.status, { error: data?.error?.message || "API error" });
     } catch (e) {
-      continue; // timeout ya network error, agla model try karo
+      continue;
     }
   }
   return json(503, { error: "Google ke server pe abhi bheed hai. 1 minute baad dobara bolo." });
