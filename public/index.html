@@ -13,6 +13,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#050b14;--panel:#0a1424;--ink:#d6f3ff;--dim:#6f8ca3;--cyan:#2ee6ff;--amber:#ffb347;--line:#16314a}
+html[data-theme=red]{--cyan:#ff4d5a;--amber:#ffc857}
+html[data-theme=gold]{--cyan:#ffc857;--amber:#2ee6ff}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:radial-gradient(ellipse at 50% 20%,#0b2540,var(--bg) 62%);color:var(--ink);font-family:"Chakra Petch",system-ui,sans-serif}
@@ -26,7 +28,7 @@ h1{font-size:1.05rem;font-weight:600;letter-spacing:.14em;margin:0;flex:1}
 .stage{display:grid;place-items:center;padding:14px 0 10px}
 #orb{all:unset;cursor:pointer;width:190px;height:190px;border-radius:50%}
 #orb:focus-visible{outline:2px solid var(--amber);outline-offset:6px}
-#orb svg{width:100%;height:100%;overflow:visible}
+#orb svg{width:100%;height:100%;overflow:visible;transform:scale(calc(1 + var(--lv,0) * .14));transition:transform .08s}
 #orb circle{fill:none;transform-box:fill-box;transform-origin:center}
 .a1{stroke:var(--line);stroke-width:2;stroke-dasharray:2 7;animation:spin 50s linear infinite}
 .a2{stroke:var(--cyan);stroke-width:3;stroke-dasharray:110 50;animation:spin 14s linear infinite reverse}
@@ -39,70 +41,98 @@ body[data-state=thinking] .a3{animation-duration:.8s}
 body[data-state=speaking] .core{animation:beat .45s ease-in-out infinite alternate}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes beat{to{transform:scale(1.4)}}
+@keyframes fade{50%{opacity:.35}}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
 .chips button{flex:none;background:transparent;color:var(--cyan);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font:inherit;font-size:.85rem;cursor:pointer}
 .chips button:focus-visible{outline:2px solid var(--amber)}
-#panel{display:none;margin-bottom:10px;padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;gap:12px;font-size:.88rem}
+#panel{display:none;margin-bottom:10px;padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;gap:12px;font-size:.88rem;max-height:46vh;overflow-y:auto}
 #panel.open{display:grid}
 #panel label{display:grid;gap:6px;color:var(--dim)}
 #panel small{color:var(--dim)}
+#panel .row{display:flex;gap:8px;flex-wrap:wrap}
 select{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit}
 select:focus-visible{outline:2px solid var(--cyan)}
 input[type=range]{width:100%;accent-color:var(--cyan)}
 #panel button{justify-self:start;background:var(--cyan);color:#022;border:0;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer}
+#panel button.ghost{background:transparent;color:var(--cyan);border:1px solid var(--line)}
 #panel button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 #log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:2px 2px 6px}
 .ln{padding:2px 0 2px 12px;border-left:2px solid var(--cyan);line-height:1.5;font-size:.97rem;overflow-wrap:anywhere}
 .ln.me{border-color:var(--amber);color:var(--dim)}
 .ln.err{border-color:#ff8a8a;color:#ff8a8a;font-size:.88rem}
+.ln.sk{color:var(--dim);animation:fade 1s ease-in-out infinite}
 .ln a{color:var(--cyan)}
+.ln button{margin-left:8px;background:transparent;color:var(--cyan);border:1px solid var(--line);border-radius:999px;padding:3px 12px;font:inherit;font-size:.82rem;cursor:pointer}
 form{display:flex;gap:8px;margin-top:10px}
 #text{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:12px 14px;border-radius:10px;font:inherit}
 #text:focus-visible{outline:2px solid var(--cyan)}
-form button{background:var(--cyan);color:#022;border:0;border-radius:10px;padding:0 18px;font:inherit;font-weight:600;cursor:pointer}
-form button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+#send{width:48px;background:var(--cyan);color:#022;border:0;border-radius:10px;display:grid;place-items:center;cursor:pointer}
+#send:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#send svg{width:22px;height:22px}
+#splash{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:9;letter-spacing:.4em;color:var(--cyan);font-size:1.3rem;transition:opacity .6s}
+#splash.off{opacity:0;pointer-events:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body data-state="idle">
+<div id="splash">JARVIS</div>
 <main>
   <header><span id="dot"></span><h1>JARVIS</h1><span id="status">Tap karke bolo</span><button id="gear" aria-label="Settings">⚙</button></header>
   <div class="stage">
     <button id="orb" aria-label="Mic on/off karo"><svg viewBox="0 0 200 200" aria-hidden="true"><circle class="a1" cx="100" cy="100" r="94"/><circle class="a2" cx="100" cy="100" r="78"/><circle class="a3" cx="100" cy="100" r="60"/><circle class="core" cx="100" cy="100" r="26"/></svg></button>
   </div>
-  <div class="chips"><button data-q="time kya hai">Time</button><button data-q="aaj ki date">Date</button><button data-q="mere notes">Notes</button><button data-q="mujhe ek motivational line batao">Motivation</button></div>
+  <div class="chips"><button data-q="time kya hai">Time</button><button data-q="aaj ki date">Date</button><button data-q="guwahati ka mausam">Weather</button><button data-q="battery kitni hai">Battery</button><button data-q="mere notes">Notes</button><button data-q="mujhe ek motivational line batao">Motivation</button></div>
   <div id="panel">
     <button type="button" id="wakeBtn">Hey Jarvis mode: Off</button>
-    <small>On karne par "Jarvis, time kya hua" bolo. Page khula aur screen on rakhni padegi, battery zyada lagti hai.</small>
+    <small>On karne par "Jarvis, time kya hua" bolo. Page khula aur screen on rakhni padegi.</small>
     <button type="button" id="natBtn">Natural voice (Gemini): On</button>
     <label>Phone voice (fallback)<select id="voice"><option value="">Auto (best male voice)</option></select></label>
     <label>Speed: <span id="rateVal">0.95</span><input type="range" id="rate" min="0.6" max="1.6" step="0.05" value="0.95"></label>
     <label>Pitch: <span id="pitchVal">0.85</span><input type="range" id="pitch" min="0.5" max="1.5" step="0.05" value="0.85"></label>
-    <button type="button" id="testVoice">Awaaz sunao</button>
+    <div class="row"><button type="button" class="ghost" data-theme="cyan">Cyan</button><button type="button" class="ghost" data-theme="red">Iron Man</button><button type="button" class="ghost" data-theme="gold">Gold</button></div>
+    <div class="row"><button type="button" id="testVoice">Awaaz sunao</button><button type="button" class="ghost" id="clearBtn">Clear chat</button></div>
     <button type="button" id="installBtn" hidden>App ki tarah install karo</button>
   </div>
   <div id="log" aria-live="polite"></div>
-  <form id="form"><input id="text" placeholder="Ya yahan type karo..." autocomplete="off"><button type="submit">Bhejo</button></form>
+  <form id="form"><input id="text" placeholder="Ya yahan type karo..." autocomplete="off"><button id="send" type="submit" aria-label="Bhejo"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.5 20.5 22 12 2.5 3.5l.01 6.6L15 12 2.5 13.9z"/></svg></button></form>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
 const log = $("log"), statusEl = $("status");
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const HAS_TTS = "speechSynthesis" in window;
-let history = [], busy = false, wakeOn = false, speaking = false, listening = false, rec = null;
+let history = [], busy = false, wakeOn = false, speaking = false, listening = false, rec = null, lastQ = "";
 const idle = () => (wakeOn ? "Hey Jarvis bolo..." : "Tap karke bolo");
 function setState(s, label) { document.body.dataset.state = s; statusEl.textContent = label; }
-function line(cls, text, url) {
+setTimeout(() => $("splash").classList.add("off"), 900);
+
+// ===== Chat log (saved, typing effect) =====
+let saved = [];
+try { saved = JSON.parse(localStorage.getItem("jv_chat") || "[]"); } catch (e) {}
+const persist = () => { try { localStorage.setItem("jv_chat", JSON.stringify(saved.slice(-40))); } catch (e) {} };
+function line(cls, text, url, opt) {
+  opt = opt || {};
   const d = document.createElement("div");
   d.className = "ln " + cls;
-  d.textContent = text;
-  if (url) { const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; a.textContent = " Kholo"; d.appendChild(a); }
   log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
+  const fin = () => {
+    d.textContent = text;
+    if (url) { const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; a.textContent = " Kholo"; d.appendChild(a); }
+    if (opt.retry) { const b = document.createElement("button"); b.textContent = "Retry"; b.onclick = () => { d.remove(); ask(lastQ, true); }; d.appendChild(b); }
+    log.scrollTop = log.scrollHeight;
+  };
+  if (opt.type && text.length > 3 && !matchMedia("(prefers-reduced-motion:reduce)").matches) {
+    let i = 0;
+    const iv = setInterval(() => { i += 2; d.textContent = text.slice(0, i); log.scrollTop = log.scrollHeight; if (i >= text.length) { clearInterval(iv); fin(); } }, 16);
+  } else fin();
+  if (!opt.skip && cls !== "sk" && !opt.retry) { saved.push({ c: cls, t: text, u: url || "" }); persist(); }
+  return d;
 }
+saved.forEach((m) => line(m.c, m.t, m.u, { skip: true }));
+$("clearBtn").onclick = () => { saved = []; persist(); log.innerHTML = ""; history = []; };
 
 // ===== Settings =====
-let prefs = { voice: "", rate: 0.95, pitch: 0.85, natural: true };
+let prefs = { voice: "", rate: 0.95, pitch: 0.85, natural: true, theme: "cyan" };
 try { prefs = Object.assign(prefs, JSON.parse(localStorage.getItem("jarvis-voice3") || "{}")); } catch (e) {}
 const save = () => { try { localStorage.setItem("jarvis-voice3", JSON.stringify(prefs)); } catch (e) {} };
 const voiceSel = $("voice"), rateEl = $("rate"), pitchEl = $("pitch");
@@ -111,12 +141,14 @@ $("rateVal").textContent = Number(prefs.rate).toFixed(2);
 $("pitchVal").textContent = Number(prefs.pitch).toFixed(2);
 const showNat = () => { $("natBtn").textContent = "Natural voice (Gemini): " + (prefs.natural ? "On" : "Off"); };
 showNat();
+document.documentElement.dataset.theme = prefs.theme;
+document.querySelectorAll("[data-theme]").forEach((b) => { b.onclick = () => { prefs.theme = b.dataset.theme; document.documentElement.dataset.theme = prefs.theme; save(); }; });
 $("gear").onclick = () => $("panel").classList.toggle("open");
 $("natBtn").onclick = () => { prefs.natural = !prefs.natural; showNat(); save(); };
-
 let installEv = null;
 window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEv = e; $("installBtn").hidden = false; });
 $("installBtn").onclick = () => { if (installEv) { installEv.prompt(); installEv = null; $("installBtn").hidden = true; } };
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 
 function score(v) {
   const n = v.name.toLowerCase(), l = v.lang;
@@ -147,13 +179,26 @@ rateEl.oninput = () => { prefs.rate = Number(rateEl.value); $("rateVal").textCon
 pitchEl.oninput = () => { prefs.pitch = Number(pitchEl.value); $("pitchVal").textContent = prefs.pitch.toFixed(2); save(); };
 $("testVoice").onclick = () => speak("Namaste. Main Jarvis hoon. Boliye, main aapki kya madad kar sakta hoon?");
 
-// ===== Speaking: Gemini natural voice, phone voice as fallback =====
-let actx = null, curSrc = null, ttsOffUntil = 0;
+// ===== Speaking: Gemini natural voice + live waveform, phone voice fallback =====
+let actx = null, curSrc = null, ttsOffUntil = 0, analyser = null, raf = 0;
 function unlockAudio() {
   try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch (e) {}
 }
 document.addEventListener("pointerdown", unlockAudio);
-function stopAudio() { if (curSrc) { try { curSrc.onended = null; curSrc.stop(); } catch (e) {} curSrc = null; } }
+function wave(on) {
+  cancelAnimationFrame(raf);
+  const orb = $("orb");
+  if (!on || !analyser) { orb.style.setProperty("--lv", 0); return; }
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  const tick = () => {
+    analyser.getByteFrequencyData(buf);
+    let s = 0; for (let i = 0; i < 24; i++) s += buf[i];
+    orb.style.setProperty("--lv", Math.min(1, s / 24 / 140).toFixed(2));
+    raf = requestAnimationFrame(tick);
+  };
+  tick();
+}
+function stopAudio() { wave(false); if (curSrc) { try { curSrc.onended = null; curSrc.stop(); } catch (e) {} curSrc = null; } }
 const cleanText = (t) => t.replace(/[*_`#>~]/g, "").replace(/https?:\/\/\S+/g, "link").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
 
 function browserSpeak(text) {
@@ -196,10 +241,11 @@ async function speak(text) {
       ch[i] = v / 32768;
     }
     await actx.resume();
+    if (!analyser) { analyser = actx.createAnalyser(); analyser.fftSize = 256; analyser.connect(actx.destination); }
     const src = actx.createBufferSource();
-    src.buffer = buf; src.connect(actx.destination);
-    src.onended = () => { curSrc = null; done(); };
-    curSrc = src; src.start();
+    src.buffer = buf; src.connect(analyser);
+    src.onended = () => { curSrc = null; wave(false); done(); };
+    curSrc = src; src.start(); wave(true);
   } catch (e) {
     ttsOffUntil = Math.max(ttsOffUntil, Date.now() + (e.name === "AbortError" ? 30000 : 5000));
     browserSpeak(text);
@@ -213,10 +259,26 @@ function done() {
 
 // ===== Commands =====
 function notes() { try { return JSON.parse(localStorage.getItem("jv_notes") || "[]"); } catch (e) { return []; } }
+const WX = (c) => c === 0 ? "saaf aasman" : c < 4 ? "halke baadal" : c < 50 ? "kohra" : c < 70 ? "baarish" : c < 80 ? "barf" : c < 90 ? "baarish ki bauchhar" : "toofan";
+async function weather(city) {
+  const g = await (await fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&name=" + encodeURIComponent(city))).json();
+  if (!g.results) return city + " ka mausam nahi mila.";
+  const p = g.results[0];
+  const w = await (await fetch("https://api.open-meteo.com/v1/forecast?current=temperature_2m,weather_code,relative_humidity_2m&latitude=" + p.latitude + "&longitude=" + p.longitude)).json();
+  const c = w.current;
+  return p.name + " mein abhi " + Math.round(c.temperature_2m) + " degree hai, " + WX(c.weather_code) + ", humidity " + c.relative_humidity_2m + " percent.";
+}
+function fireAlarm(label) {
+  const msg = "Time ho gaya: " + label;
+  line("ai", msg, "", { type: true });
+  try { if (navigator.vibrate) navigator.vibrate([300, 150, 300]); } catch (e) {}
+  speak(msg);
+}
+const APPS = { youtube: "https://www.youtube.com", whatsapp: "https://web.whatsapp.com", instagram: "https://www.instagram.com", gmail: "https://mail.google.com" };
 function jarvisCommand(raw) {
   const t = raw.toLowerCase().trim();
   let m;
-  if ((m = t.match(/(?:note (?:karo|kar|down)|note this|yaad rakho|remember)\s*[:,-]?\s*(.+)/))) {
+  if ((m = t.match(/(?:note (?:karo|kar|down)|note this|yaad rakho|remember)\s*[:,-]?\s*(.+)/)) && !/(minute|ghant|second)/.test(t)) {
     const n = notes(); n.push(m[1]);
     try { localStorage.setItem("jv_notes", JSON.stringify(n)); } catch (e) {}
     return { text: "Note kar liya: " + m[1] };
@@ -229,92 +291,24 @@ function jarvisCommand(raw) {
     try { localStorage.removeItem("jv_notes"); } catch (e) {}
     return { text: "Saare notes delete kar diye." };
   }
+  if ((m = t.match(/(\d+)\s*(sec|second|min|minute|ghant|hour)/)) && /(timer|yaad|remind|alarm)/.test(t)) {
+    const u = m[2].slice(0, 3), ms = Number(m[1]) * (u === "sec" ? 1000 : u === "min" ? 60000 : 3600000);
+    const lab = (t.match(/(?:yaad dilao|remind me to|remind me)\s*(.+)/) || [])[1] || "aapka timer";
+    setTimeout(() => fireAlarm(lab), ms);
+    return { text: m[1] + " " + m[2] + " ka timer laga diya. Ye tab tak chalega jab tak page khula hai." };
+  }
+  if (/(mausam|weather|temperature)/.test(t)) {
+    const city = t.replace(/\b(aaj|ka|ki|ke|mein|me|mausam|weather|temperature|kaisa|hai|kya|how|is|the|in|batao|bataiye|today|abhi)\b/g, "").replace(/\s+/g, " ").trim() || "Guwahati";
+    return { fn: () => weather(city) };
+  }
+  if (/(battery|charge kitna)/.test(t)) {
+    return { fn: async () => { if (!navigator.getBattery) return "Is browser mein battery info nahi milti."; const b = await navigator.getBattery(); return "Battery " + Math.round(b.level * 100) + " percent hai" + (b.charging ? ", aur charging chal rahi hai." : "."); } };
+  }
+  if ((m = t.match(/(youtube|whatsapp|instagram|gmail)/)) && /(kholo|open|chalao|khol do)/.test(t)) {
+    return { text: m[1] + " khol raha hoon.", url: APPS[m[1]] };
+  }
   if ((m = t.match(/(?:\bmaps?\b|navigate|route|raasta)(?: me| mein| pe| par| to| for)?\s+(.+)/))) {
     return { text: "Maps mein khol raha hoon: " + m[1], url: "https://www.google.com/maps/search/" + encodeURIComponent(m[1]) };
   }
   if ((m = t.match(/(?:search|google|dhundo|khojo)(?: karo| kar| for)?\s+(.+)/))) {
-    return { text: "Search kar raha hoon: " + m[1], url: "https://www.google.com/search?q=" + encodeURIComponent(m[1]) };
-  }
-  if (/(\bdate\b|tarikh|tareekh|aaj kaun sa din|which day)/.test(t)) {
-    return { text: "Aaj " + new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + " hai." };
-  }
-  if (/(\btime\b|samay|waqt|kitne baje)/.test(t)) {
-    return { text: "Abhi " + new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }) + " baje hain." };
-  }
-  return null;
-}
-
-// ===== Gemini chat via Netlify function (expects "messages") =====
-async function callAI(text) {
-  const msgs = history.concat([{ role: "user", content: text }]);
-  const r = await fetch("/.netlify/functions/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: msgs }) });
-  const raw = await r.text();
-  let d; try { d = JSON.parse(raw); } catch (e) { d = raw; }
-  if (!r.ok) throw new Error((d && (d.error || d.message)) || "Server error " + r.status);
-  return typeof d === "string" ? d : (d.reply || d.text || d.message || d.response || d.output || d.answer || JSON.stringify(d));
-}
-async function ask(text) {
-  if (busy || !text) return;
-  busy = true;
-  line("me", text);
-  setState("thinking", "Soch raha hoon...");
-  try {
-    const cmd = jarvisCommand(text);
-    let reply, url;
-    if (cmd) { reply = cmd.text; url = cmd.url; if (url) window.open(url, "_blank"); }
-    else {
-      reply = await callAI(text);
-      history.push({ role: "user", content: text }, { role: "assistant", content: reply });
-      history = history.slice(-20);
-    }
-    line("ai", reply, url);
-    busy = false;
-    speak(reply);
-  } catch (e) {
-    busy = false;
-    line("err", "Problem: " + e.message);
-    setState("idle", idle());
-    if (wakeOn) startRec();
-  }
-}
-
-// ===== Mic + wake word =====
-function startRec() {
-  if (!SR || listening || busy || speaking) return;
-  rec = new SR();
-  rec.lang = "en-IN";
-  rec.interimResults = false;
-  rec.continuous = wakeOn;
-  rec.onstart = () => { listening = true; setState("listening", wakeOn ? "Hey Jarvis bolo..." : "Sun raha hoon..."); };
-  rec.onresult = (e) => heard(e.results[e.results.length - 1][0].transcript.trim());
-  rec.onerror = () => {};
-  rec.onend = () => {
-    listening = false;
-    if (wakeOn && !busy && !speaking) setTimeout(startRec, 300);
-    else if (!busy && !speaking) setState("idle", idle());
-  };
-  try { rec.start(); } catch (e) {}
-}
-function heard(t) {
-  if (!wakeOn) return ask(t);
-  const m = t.match(/j[ae]r?[wv]is/i);
-  if (!m) return;
-  const rest = t.slice(m.index + m[0].length).replace(/^[\s,.:-]+/, "");
-  if (rest) ask(rest); else { line("ai", "Ji, boliye."); speak("Ji, boliye."); }
-}
-$("orb").onclick = () => {
-  if (!SR) { line("err", "Is browser mein mic support nahi hai. Chrome use karo."); return; }
-  if (speaking) { stopAudio(); if (HAS_TTS) speechSynthesis.cancel(); done(); return; }
-  if (listening) { try { rec.stop(); } catch (e) {} return; }
-  startRec();
-};
-$("wakeBtn").onclick = () => {
-  wakeOn = !wakeOn;
-  $("wakeBtn").textContent = "Hey Jarvis mode: " + (wakeOn ? "On" : "Off");
-  if (wakeOn) startRec(); else { if (rec) { try { rec.abort(); } catch (e) {} } setState("idle", idle()); }
-};
-document.querySelectorAll(".chips button").forEach((b) => { b.onclick = () => ask(b.dataset.q); });
-$("form").onsubmit = (e) => { e.preventDefault(); const v = $("text").value.trim(); $("text").value = ""; ask(v); };
-</script>
-</body>
-  </html>
+    return { text: "Search kar raha ho
