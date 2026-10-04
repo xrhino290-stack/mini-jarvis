@@ -79,6 +79,7 @@ form button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
     <label>Speed: <span id="rateVal">0.95</span><input type="range" id="rate" min="0.6" max="1.6" step="0.05" value="0.95"></label>
     <label>Pitch: <span id="pitchVal">0.85</span><input type="range" id="pitch" min="0.5" max="1.5" step="0.05" value="0.85"></label>
     <button type="button" id="testVoice">Awaaz sunao</button>
+    <button type="button" id="installBtn" hidden>App ki tarah install karo</button>
   </div>
   <div id="log" aria-live="polite"></div>
   <form id="form"><input id="text" placeholder="Ya yahan type karo..." autocomplete="off"><button type="submit">Bhejo</button></form>
@@ -112,6 +113,10 @@ const showNat = () => { $("natBtn").textContent = "Natural voice (Gemini): " + (
 showNat();
 $("gear").onclick = () => $("panel").classList.toggle("open");
 $("natBtn").onclick = () => { prefs.natural = !prefs.natural; showNat(); save(); };
+
+let installEv = null;
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEv = e; $("installBtn").hidden = false; });
+$("installBtn").onclick = () => { if (installEv) { installEv.prompt(); installEv = null; $("installBtn").hidden = true; } };
 
 function score(v) {
   const n = v.name.toLowerCase(), l = v.lang;
@@ -239,11 +244,10 @@ function jarvisCommand(raw) {
   return null;
 }
 
-// ===== Gemini chat via Netlify function =====
+// ===== Gemini chat via Netlify function (expects "messages") =====
 async function callAI(text) {
-  const post = (h) => fetch("/.netlify/functions/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, text: text, prompt: text, history: h }) });
-  let r = await post(history);
-  if (!r.ok) r = await post([]);
+  const msgs = history.concat([{ role: "user", content: text }]);
+  const r = await fetch("/.netlify/functions/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: msgs }) });
   const raw = await r.text();
   let d; try { d = JSON.parse(raw); } catch (e) { d = raw; }
   if (!r.ok) throw new Error((d && (d.error || d.message)) || "Server error " + r.status);
