@@ -2,7 +2,7 @@
 <html lang="hi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mini Jarvis</title>
 <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -12,77 +12,74 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#050b14;--panel:#0b1626;--ink:#d6f3ff;--dim:#6f8ca3;--cyan:#2ee6ff;--amber:#ffb347;--line:#16314a}
+:root{--bg:#050b14;--panel:#0a1424;--ink:#d6f3ff;--dim:#6f8ca3;--cyan:#2ee6ff;--amber:#ffb347;--line:#16314a}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:radial-gradient(circle at 50% 28%,#0a2038,var(--bg) 60%);color:var(--ink);font-family:"Chakra Petch",system-ui,sans-serif}
-main{width:100%;max-width:640px;height:100%;display:flex;flex-direction:column;padding:20px 16px 16px}
-h1{font-size:1.1rem;font-weight:600;margin:0;letter-spacing:.04em}
-header{display:flex;justify-content:space-between;align-items:center}
-#status{color:var(--dim);font-size:.85rem}
-.orb-wrap{display:grid;place-items:center;padding:26px 0 18px}
-button#orb{all:unset;cursor:pointer;width:150px;height:150px;border-radius:50%;position:relative;display:grid;place-items:center}
-button#orb:focus-visible{outline:2px solid var(--amber);outline-offset:6px}
-.ring{position:absolute;border-radius:50%;border:2px solid var(--cyan);opacity:.9}
-.r1{inset:0;border-style:dashed;border-color:var(--line);border-width:3px}
-.r2{inset:16px;border-color:var(--cyan);border-top-color:transparent;border-bottom-color:transparent}
-.r3{inset:38px;border-color:var(--cyan);opacity:.5}
-.core{width:44px;height:44px;border-radius:50%;background:var(--cyan);box-shadow:0 0 28px var(--cyan)}
-[data-state=listening] .core{background:var(--amber);box-shadow:0 0 36px var(--amber)}
-[data-state=listening] .r2,[data-state=listening] .r3{border-color:var(--amber)}
-[data-state=thinking] .r2{animation:spin 1s linear infinite}
-[data-state=speaking] .core{animation:pulse .5s ease-in-out infinite alternate}
-[data-state=listening] .core{animation:pulse .9s ease-in-out infinite alternate}
+body{background:radial-gradient(ellipse at 50% 20%,#0b2540,var(--bg) 62%);color:var(--ink);font-family:"Chakra Petch",system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) 16px calc(14px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;gap:10px}
+h1{font-size:1.05rem;font-weight:600;letter-spacing:.14em;margin:0;flex:1}
+#dot{width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+#status{color:var(--dim);font-size:.82rem}
+#gear{all:unset;cursor:pointer;color:var(--dim);font-size:1.2rem;padding:4px 6px}
+#gear:focus-visible{outline:2px solid var(--cyan)}
+.stage{display:grid;place-items:center;padding:14px 0 10px}
+#orb{all:unset;cursor:pointer;width:190px;height:190px;border-radius:50%}
+#orb:focus-visible{outline:2px solid var(--amber);outline-offset:6px}
+#orb svg{width:100%;height:100%;overflow:visible}
+#orb circle{fill:none;transform-box:fill-box;transform-origin:center}
+.a1{stroke:var(--line);stroke-width:2;stroke-dasharray:2 7;animation:spin 50s linear infinite}
+.a2{stroke:var(--cyan);stroke-width:3;stroke-dasharray:110 50;animation:spin 14s linear infinite reverse}
+.a3{stroke:var(--cyan);stroke-width:4;stroke-dasharray:80 260;opacity:.6;animation:spin 9s linear infinite}
+.core{fill:var(--cyan)!important;filter:drop-shadow(0 0 14px var(--cyan))}
+body[data-state=listening] .a2,body[data-state=listening] .a3{stroke:var(--amber)}
+body[data-state=listening] .core{fill:var(--amber)!important;filter:drop-shadow(0 0 16px var(--amber));animation:beat .8s ease-in-out infinite alternate}
+body[data-state=thinking] .a2{animation-duration:1.2s}
+body[data-state=thinking] .a3{animation-duration:.8s}
+body[data-state=speaking] .core{animation:beat .45s ease-in-out infinite alternate}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes pulse{to{transform:scale(1.35)}}
-details{margin:0 0 10px;color:var(--dim);font-size:.88rem}
-summary{cursor:pointer;padding:6px 0}
-summary:focus-visible{outline:2px solid var(--cyan)}
-.set{display:grid;gap:12px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--ink)}
-.set label{display:grid;gap:6px}
-.set small{color:var(--dim)}
-select{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit}
+@keyframes beat{to{transform:scale(1.4)}}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.chips button{flex:none;background:transparent;color:var(--cyan);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font:inherit;font-size:.85rem;cursor:pointer}
+.chips button:focus-visible{outline:2px solid var(--amber)}
+#panel{display:none;margin-bottom:10px;padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;gap:12px;font-size:.88rem}
+#panel.open{display:grid}
+#panel label{display:grid;gap:6px;color:var(--dim)}
+#panel small{color:var(--dim)}
+select{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit}
 select:focus-visible{outline:2px solid var(--cyan)}
 input[type=range]{width:100%;accent-color:var(--cyan)}
-.set button{justify-self:start;background:var(--cyan);color:#022;border:0;border-radius:10px;padding:9px 16px;font:inherit}
-.set button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
-#log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px}
-.msg{max-width:85%;padding:10px 14px;border-radius:14px;line-height:1.45;font-size:.97rem;overflow-wrap:anywhere}
-.me{align-self:flex-end;background:#12385a}
-.ai{align-self:flex-start;background:var(--panel);border:1px solid var(--line)}
-.err{align-self:center;color:#ff8a8a;font-size:.88rem}
-.msg a{color:var(--cyan)}
-form{display:flex;gap:8px;margin-top:12px}
-#text{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:12px 14px;border-radius:12px;font:inherit}
+#panel button{justify-self:start;background:var(--cyan);color:#022;border:0;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer}
+#panel button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:2px 2px 6px}
+.ln{padding:2px 0 2px 12px;border-left:2px solid var(--cyan);line-height:1.5;font-size:.97rem;overflow-wrap:anywhere}
+.ln.me{border-color:var(--amber);color:var(--dim)}
+.ln.err{border-color:#ff8a8a;color:#ff8a8a;font-size:.88rem}
+.ln a{color:var(--cyan)}
+form{display:flex;gap:8px;margin-top:10px}
+#text{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:12px 14px;border-radius:10px;font:inherit}
 #text:focus-visible{outline:2px solid var(--cyan)}
-form button{background:var(--cyan);color:#022;border:0;border-radius:12px;padding:0 18px;font:inherit;font-weight:600;cursor:pointer}
+form button{background:var(--cyan);color:#022;border:0;border-radius:10px;padding:0 18px;font:inherit;font-weight:600;cursor:pointer}
 form button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
 <body data-state="idle">
 <main>
-  <header><h1>Mini Jarvis</h1><span id="status">Tap karke bolo</span></header>
-  <div class="orb-wrap">
-    <button id="orb" aria-label="Mic on/off karo"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span><span class="core"></span></button>
+  <header><span id="dot"></span><h1>JARVIS</h1><span id="status">Tap karke bolo</span><button id="gear" aria-label="Settings">⚙</button></header>
+  <div class="stage">
+    <button id="orb" aria-label="Mic on/off karo"><svg viewBox="0 0 200 200" aria-hidden="true"><circle class="a1" cx="100" cy="100" r="94"/><circle class="a2" cx="100" cy="100" r="78"/><circle class="a3" cx="100" cy="100" r="60"/><circle class="core" cx="100" cy="100" r="26"/></svg></button>
   </div>
-  <details>
-    <summary>Settings</summary>
-    <div class="set">
-      <button type="button" id="wakeBtn">Hey Jarvis mode: Off</button>
-      <small>On karne par "Jarvis, time kya hua" bolo. Page khula aur screen on rakhni padegi, battery zyada lagti hai.</small>
-      <label>Voice
-        <select id="voice"><option value="">Auto (best male voice)</option></select>
-      </label>
-      <label>Speed: <span id="rateVal">0.95</span>
-        <input type="range" id="rate" min="0.6" max="1.6" step="0.05" value="0.95">
-      </label>
-      <label>Pitch: <span id="pitchVal">0.85</span>
-        <input type="range" id="pitch" min="0.5" max="1.5" step="0.05" value="0.85">
-      </label>
-      <button type="button" id="testVoice">Awaaz sunao</button>
-    </div>
-  </details>
+  <div class="chips"><button data-q="time kya hai">Time</button><button data-q="aaj ki date">Date</button><button data-q="mere notes">Notes</button><button data-q="mujhe ek motivational line batao">Motivation</button></div>
+  <div id="panel">
+    <button type="button" id="wakeBtn">Hey Jarvis mode: Off</button>
+    <small>On karne par "Jarvis, time kya hua" bolo. Page khula aur screen on rakhni padegi, battery zyada lagti hai.</small>
+    <button type="button" id="natBtn">Natural voice (Gemini): On</button>
+    <label>Phone voice (fallback)<select id="voice"><option value="">Auto (best male voice)</option></select></label>
+    <label>Speed: <span id="rateVal">0.95</span><input type="range" id="rate" min="0.6" max="1.6" step="0.05" value="0.95"></label>
+    <label>Pitch: <span id="pitchVal">0.85</span><input type="range" id="pitch" min="0.5" max="1.5" step="0.05" value="0.85"></label>
+    <button type="button" id="testVoice">Awaaz sunao</button>
+  </div>
   <div id="log" aria-live="polite"></div>
   <form id="form"><input id="text" placeholder="Ya yahan type karo..." autocomplete="off"><button type="submit">Bhejo</button></form>
 </main>
@@ -94,30 +91,28 @@ const HAS_TTS = "speechSynthesis" in window;
 let history = [], busy = false, wakeOn = false, speaking = false, listening = false, rec = null;
 const idle = () => (wakeOn ? "Hey Jarvis bolo..." : "Tap karke bolo");
 function setState(s, label) { document.body.dataset.state = s; statusEl.textContent = label; }
-function bubble(cls, text, url) {
+function line(cls, text, url) {
   const d = document.createElement("div");
-  d.className = "msg " + cls;
+  d.className = "ln " + cls;
   d.textContent = text;
-  if (url) {
-    const a = document.createElement("a");
-    a.href = url; a.target = "_blank"; a.rel = "noopener"; a.textContent = " Kholo";
-    d.appendChild(a);
-  }
+  if (url) { const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; a.textContent = " Kholo"; d.appendChild(a); }
   log.appendChild(d);
   log.scrollTop = log.scrollHeight;
-  return d;
 }
 
-// ===== Voice settings =====
-let prefs = { voice: "", rate: 0.95, pitch: 0.85 };
-try { prefs = Object.assign(prefs, JSON.parse(localStorage.getItem("jarvis-voice2") || "{}")); } catch (e) {}
-const savePrefs = () => { try { localStorage.setItem("jarvis-voice2", JSON.stringify(prefs)); } catch (e) {} };
+// ===== Settings =====
+let prefs = { voice: "", rate: 0.95, pitch: 0.85, natural: true };
+try { prefs = Object.assign(prefs, JSON.parse(localStorage.getItem("jarvis-voice3") || "{}")); } catch (e) {}
+const save = () => { try { localStorage.setItem("jarvis-voice3", JSON.stringify(prefs)); } catch (e) {} };
 const voiceSel = $("voice"), rateEl = $("rate"), pitchEl = $("pitch");
 rateEl.value = prefs.rate; pitchEl.value = prefs.pitch;
 $("rateVal").textContent = Number(prefs.rate).toFixed(2);
 $("pitchVal").textContent = Number(prefs.pitch).toFixed(2);
+const showNat = () => { $("natBtn").textContent = "Natural voice (Gemini): " + (prefs.natural ? "On" : "Off"); };
+showNat();
+$("gear").onclick = () => $("panel").classList.toggle("open");
+$("natBtn").onclick = () => { prefs.natural = !prefs.natural; showNat(); save(); };
 
-// natural / cinematic voices score higher
 function score(v) {
   const n = v.name.toLowerCase(), l = v.lang;
   let s = 0;
@@ -142,16 +137,24 @@ function pickVoice() {
   if (prefs.voice) { const v = all.find((x) => x.voiceURI === prefs.voice); if (v) return v; }
   return all.filter((v) => /^(hi|en)/i.test(v.lang)).sort((a, b) => score(b) - score(a))[0] || null;
 }
-voiceSel.onchange = () => { prefs.voice = voiceSel.value; savePrefs(); };
-rateEl.oninput = () => { prefs.rate = Number(rateEl.value); $("rateVal").textContent = prefs.rate.toFixed(2); savePrefs(); };
-pitchEl.oninput = () => { prefs.pitch = Number(pitchEl.value); $("pitchVal").textContent = prefs.pitch.toFixed(2); savePrefs(); };
+voiceSel.onchange = () => { prefs.voice = voiceSel.value; save(); };
+rateEl.oninput = () => { prefs.rate = Number(rateEl.value); $("rateVal").textContent = prefs.rate.toFixed(2); save(); };
+pitchEl.oninput = () => { prefs.pitch = Number(pitchEl.value); $("pitchVal").textContent = prefs.pitch.toFixed(2); save(); };
 $("testVoice").onclick = () => speak("Namaste. Main Jarvis hoon. Boliye, main aapki kya madad kar sakta hoon?");
 
-// ===== Speaking (sentence by sentence, sounds more natural) =====
-function speak(text) {
+// ===== Speaking: Gemini natural voice, phone voice as fallback =====
+let actx = null, curSrc = null, ttsOffUntil = 0;
+function unlockAudio() {
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch (e) {}
+}
+document.addEventListener("pointerdown", unlockAudio);
+function stopAudio() { if (curSrc) { try { curSrc.onended = null; curSrc.stop(); } catch (e) {} curSrc = null; } }
+const cleanText = (t) => t.replace(/[*_`#>~]/g, "").replace(/https?:\/\/\S+/g, "link").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
+
+function browserSpeak(text) {
   if (!HAS_TTS) { done(); return; }
   speechSynthesis.cancel();
-  const clean = text.replace(/[*_`#>~]/g, "").replace(/https?:\/\/\S+/g, "link").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
+  const clean = cleanText(text);
   const parts = clean.match(/[^.!?।\n]+[.!?।]?/g) || [clean];
   if (rec) { try { rec.abort(); } catch (e) {} }
   speaking = true;
@@ -164,6 +167,38 @@ function speak(text) {
     if (i === parts.length - 1) { u.onend = done; u.onerror = done; }
     speechSynthesis.speak(u);
   });
+}
+async function speak(text) {
+  const clean = cleanText(text);
+  if (!prefs.natural || !actx || clean.length > 450 || Date.now() < ttsOffUntil) return browserSpeak(text);
+  speaking = true;
+  setState("speaking", "Bol raha hoon...");
+  if (rec) { try { rec.abort(); } catch (e) {} }
+  if (HAS_TTS) speechSynthesis.cancel();
+  stopAudio();
+  try {
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 15000);
+    const r = await fetch("/.netlify/functions/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: clean }), signal: ctl.signal });
+    clearTimeout(to);
+    if (!r.ok) { if (r.status === 429) ttsOffUntil = Date.now() + 60000; throw new Error("tts " + r.status); }
+    const d = await r.json();
+    const bin = atob(d.audio), n = bin.length >> 1;
+    const buf = actx.createBuffer(1, n, d.rate || 24000), ch = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) {
+      let v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8);
+      if (v >= 32768) v -= 65536;
+      ch[i] = v / 32768;
+    }
+    await actx.resume();
+    const src = actx.createBufferSource();
+    src.buffer = buf; src.connect(actx.destination);
+    src.onended = () => { curSrc = null; done(); };
+    curSrc = src; src.start();
+  } catch (e) {
+    ttsOffUntil = Math.max(ttsOffUntil, Date.now() + (e.name === "AbortError" ? 30000 : 5000));
+    browserSpeak(text);
+  }
 }
 function done() {
   speaking = false;
@@ -204,13 +239,9 @@ function jarvisCommand(raw) {
   return null;
 }
 
-// ===== Gemini via Netlify function =====
+// ===== Gemini chat via Netlify function =====
 async function callAI(text) {
-  const post = (h) => fetch("/.netlify/functions/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: text, text: text, prompt: text, history: h })
-  });
+  const post = (h) => fetch("/.netlify/functions/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, text: text, prompt: text, history: h }) });
   let r = await post(history);
   if (!r.ok) r = await post([]);
   const raw = await r.text();
@@ -218,35 +249,32 @@ async function callAI(text) {
   if (!r.ok) throw new Error((d && (d.error || d.message)) || "Server error " + r.status);
   return typeof d === "string" ? d : (d.reply || d.text || d.message || d.response || d.output || d.answer || JSON.stringify(d));
 }
-
 async function ask(text) {
   if (busy || !text) return;
   busy = true;
-  bubble("me", text);
+  line("me", text);
   setState("thinking", "Soch raha hoon...");
   try {
     const cmd = jarvisCommand(text);
     let reply, url;
-    if (cmd) {
-      reply = cmd.text; url = cmd.url;
-      if (url) window.open(url, "_blank");
-    } else {
+    if (cmd) { reply = cmd.text; url = cmd.url; if (url) window.open(url, "_blank"); }
+    else {
       reply = await callAI(text);
       history.push({ role: "user", content: text }, { role: "assistant", content: reply });
       history = history.slice(-20);
     }
-    bubble("ai", reply, url);
+    line("ai", reply, url);
     busy = false;
     speak(reply);
   } catch (e) {
     busy = false;
-    bubble("err", "Problem: " + e.message);
+    line("err", "Problem: " + e.message);
     setState("idle", idle());
     if (wakeOn) startRec();
   }
 }
 
-// ===== Mic =====
+// ===== Mic + wake word =====
 function startRec() {
   if (!SR || listening || busy || speaking) return;
   rec = new SR();
@@ -268,11 +296,11 @@ function heard(t) {
   const m = t.match(/j[ae]r?[wv]is/i);
   if (!m) return;
   const rest = t.slice(m.index + m[0].length).replace(/^[\s,.:-]+/, "");
-  if (rest) ask(rest); else { bubble("ai", "Ji, boliye."); speak("Ji, boliye."); }
+  if (rest) ask(rest); else { line("ai", "Ji, boliye."); speak("Ji, boliye."); }
 }
 $("orb").onclick = () => {
-  if (!SR) { bubble("err", "Is browser mein mic support nahi hai. Chrome use karo."); return; }
-  if (speaking) { speechSynthesis.cancel(); done(); return; }
+  if (!SR) { line("err", "Is browser mein mic support nahi hai. Chrome use karo."); return; }
+  if (speaking) { stopAudio(); if (HAS_TTS) speechSynthesis.cancel(); done(); return; }
   if (listening) { try { rec.stop(); } catch (e) {} return; }
   startRec();
 };
@@ -281,7 +309,8 @@ $("wakeBtn").onclick = () => {
   $("wakeBtn").textContent = "Hey Jarvis mode: " + (wakeOn ? "On" : "Off");
   if (wakeOn) startRec(); else { if (rec) { try { rec.abort(); } catch (e) {} } setState("idle", idle()); }
 };
+document.querySelectorAll(".chips button").forEach((b) => { b.onclick = () => ask(b.dataset.q); });
 $("form").onsubmit = (e) => { e.preventDefault(); const v = $("text").value.trim(); $("text").value = ""; ask(v); };
 </script>
 </body>
-</html>
+  </html>
