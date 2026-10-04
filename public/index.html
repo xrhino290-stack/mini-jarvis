@@ -240,7 +240,7 @@ async function speak(text) {
   try {
     const ctl = new AbortController();
     const to = setTimeout(() => ctl.abort(), 15000);
-    const r = await fetch("/.netlify/functions/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: clean }), signal: ctl.signal });
+    const r = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: clean }), signal: ctl.signal });
     clearTimeout(to);
     if (!r.ok) { if (r.status === 429) ttsOffUntil = Date.now() + 60000; throw new Error("tts " + r.status); }
     const d = await r.json();
@@ -302,4 +302,4 @@ function jarvisCommand(raw) {
     try { localStorage.removeItem("jv_notes"); } catch (e) {}
     return { text: "Saare notes delete kar diye." };
   }
-  if ((m = t.match(/(\d+)\s*(sec|second|min|minute|ghant|ho
+  if ((m = t.match(/(\d+)\s*(sec|second|min|minute|ghant|hour)/)) && /(tim
