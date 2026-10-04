@@ -3,111 +3,221 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b1220">
+<meta name="theme-color" content="#050a14">
 <title>Jarvis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b1220;--panel:#131b2b;--line:#222d42;--text:#e6e9ee;--mute:#8793a6;--accent:#4a9fc0;--user:#1b2a3d}
+:root{
+  --glow:.55;                 /* neele background ki taqat: 0 se 1 */
+  --bg:#050a14;
+  --ac:#2ee6ff;               /* main accent (idle) */
+  --ac-dim:#1d5a70;
+  --ac-mid:#1c8aa0;
+  --gl:#0f5a8c;
+  --panel:rgba(12,29,51,.75);
+  --line:rgba(46,230,255,.18);
+  --text:#e4f1fa;
+  --mute:#7f97ab;
+  --sa:9s;--sb:7s;--sc:5s;
+}
+/* Listening = orange */
+body.listen{--ac:#ff9a2e;--ac-dim:#6b4310;--ac-mid:#c9741a;--gl:#8a470c;--sa:3s;--sb:2.4s;--sc:1.8s}
+body.think{--sa:2s;--sb:1.6s;--sc:1.2s}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
 html,body{height:100%}
-body{background:var(--bg) radial-gradient(ellipse 70% 240px at 50% 0,rgba(45,110,160,.22),rgba(45,110,160,0) 100%) no-repeat;color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;max-width:720px;margin:0 auto;padding-top:env(safe-area-inset-top,0)}
-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
-header h1{font-size:17px;font-weight:600}
-header small{display:block;color:var(--mute);font-size:12px;font-weight:400;margin-top:2px}
+body{background:var(--bg);color:var(--text);font-family:"Bai Jamjuree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  display:flex;flex-direction:column;max-width:720px;margin:0 auto;height:100dvh;overflow:hidden;padding-top:env(safe-area-inset-top,0)}
+.glow{position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:var(--glow);transition:opacity .4s;
+  background:radial-gradient(ellipse 60% 36% at 50% 14%,var(--gl) 0%,rgba(0,0,0,0) 100%)}
+.c{position:fixed;width:16px;height:16px;border:1.5px solid var(--ac);opacity:.65;pointer-events:none;z-index:5;transition:border-color .3s}
+.c.tl{left:8px;top:calc(8px + env(safe-area-inset-top,0));border-right:0;border-bottom:0}
+.c.tr{right:8px;top:calc(8px + env(safe-area-inset-top,0));border-left:0;border-bottom:0}
+.c.bl{left:8px;bottom:calc(8px + env(safe-area-inset-bottom,0));border-right:0;border-top:0}
+.c.br{right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0));border-left:0;border-top:0}
+
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 22px 4px;flex:none}
+header b{font-weight:600;letter-spacing:3px;font-size:13px;color:var(--ac);transition:color .3s}
 .tools{display:flex;gap:8px}
-.ib{background:none;border:1px solid var(--line);color:var(--mute);border-radius:8px;padding:7px 10px;font-size:13px;cursor:pointer}
-.ib.on{color:var(--text);border-color:var(--accent)}
-.orbwrap{display:flex;justify-content:center;padding:14px 0 6px}
-.orb{width:64px;height:64px;border-radius:50%;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;opacity:.85;transition:.3s}
-.orb i{width:22px;height:22px;border-radius:50%;background:var(--accent);display:block;transition:.3s}
-.orb.listen{animation:pulse 1.2s ease-in-out infinite}
-.orb.think{animation:spin 1.4s linear infinite;border-style:dashed}
-.orb.speak i{animation:pulse .8s ease-in-out infinite}
-@keyframes pulse{50%{transform:scale(1.12);opacity:.7}}
+.tb{background:none;border:1px solid var(--line);color:var(--mute);border-radius:6px;padding:5px 11px;font:inherit;font-size:12px;cursor:pointer}
+.tb.on{color:var(--ac);border-color:var(--ac-dim)}
+
+/* orb */
+.orb{position:relative;width:150px;height:150px}
+.orb svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.orb circle{fill:none;transform-box:fill-box;transform-origin:center;transition:stroke .3s}
+.r0{stroke:var(--ac-dim);stroke-width:5;stroke-dasharray:1 8.3}
+.ra{stroke:var(--ac);stroke-width:3;stroke-linecap:round;stroke-dasharray:260 117;animation:spin var(--sa) linear infinite}
+.rb{stroke:var(--ac-mid);stroke-width:3;stroke-linecap:round;stroke-dasharray:110 192;animation:spin var(--sb) linear infinite reverse}
+.rc{stroke:var(--ac);stroke-width:3;stroke-linecap:round;stroke-dasharray:90 136;animation:spin var(--sc) linear infinite}
+.core{position:absolute;left:40%;top:40%;width:20%;height:20%;border-radius:50%;background:var(--ac);box-shadow:0 0 22px var(--ac-dim);transition:background .3s}
+body.listen .core,body.think .core,body.speak .core{animation:beat .9s ease-in-out infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.status{text-align:center;color:var(--mute);font-size:12px;min-height:16px;margin-bottom:6px}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 10px;scrollbar-width:none}
+@keyframes beat{50%{transform:scale(1.18)}}
+.orbwrap{display:flex;justify-content:center;height:156px;flex:none;cursor:pointer;transition:height .4s ease}
+.orbwrap .orb{transform-origin:top center;transition:transform .4s ease;margin-top:4px}
+.orbwrap.compact{height:92px}
+.orbwrap.compact .orb{transform:scale(.55)}
+.status{text-align:center;font-size:12px;color:var(--mute);min-height:16px;flex:none;letter-spacing:.4px}
+
+/* home dashboard */
+#home{flex:1;overflow-y:auto;padding:8px 16px 8px;min-height:0}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cd{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 12px;text-align:left;color:var(--text);font:inherit;cursor:pointer}
+.cd:active{border-color:var(--ac)}
+.cd small{display:block;font-size:11px;color:var(--mute);letter-spacing:.4px}
+.cd b{display:block;font-size:20px;font-weight:500;margin:3px 0 1px}
+.cd span{font-size:12px;color:var(--mute)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:none;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:8px 14px;font-size:13px;cursor:pointer}
-.chip:active{border-color:var(--accent)}
-#chat{flex:1;overflow-y:auto;padding:8px 16px 16px;display:flex;flex-direction:column;gap:10px}
-.empty{margin:auto;color:var(--mute);font-size:14px;text-align:center;line-height:1.5}
-.m{max-width:85%;padding:10px 13px;border-radius:14px;font-size:15px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
-.m.u{align-self:flex-end;background:var(--user);border-bottom-right-radius:4px}
-.m.j{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px}
-.m.err{color:#e0a3a3}
-.bar{display:flex;gap:8px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0));border-top:1px solid var(--line);background:var(--bg)}
-.bar input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:22px;padding:12px 16px;font-size:15px;outline:none}
-.bar input:focus{border-color:var(--accent)}
-.rb{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
-.rb.send{background:var(--accent);border-color:var(--accent);color:#06121a}
-.rb.rec{border-color:var(--accent);color:var(--accent)}
-.rb svg{width:20px;height:20px;fill:currentColor}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+.chip{flex:none;background:rgba(10,24,44,.6);border:1px solid var(--line);color:var(--ac);border-radius:8px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer;transition:color .3s}
+.chip:active{border-color:var(--ac)}
+.quote{margin-top:12px;padding:8px 0 8px 12px;border-left:2px solid var(--ac);font-size:14px;line-height:1.5;color:#cfe3f0}
+.quote small{display:block;font-size:11px;color:var(--mute);margin-bottom:3px;letter-spacing:.4px}
+
+/* chat */
+#chat{flex:1;overflow-y:auto;padding:6px 16px 12px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.empty{margin:auto;text-align:center;color:var(--mute);font-size:14px}
+.m{max-width:85%;padding:10px 14px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;animation:in .25s ease}
+.m.u{align-self:flex-end;background:rgba(30,80,120,.55);border:1px solid rgba(46,230,255,.22);border-radius:12px 12px 3px 12px}
+.m.j{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:3px 12px 12px 12px}
+.m.err{color:#f0aaaa;border-color:rgba(240,120,120,.4)}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ac);margin:0 2px;animation:blink 1.1s infinite}
+.dots span:nth-child(2){animation-delay:.18s}.dots span:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+/* input bar */
+.bar{display:flex;gap:8px;align-items:center;margin:6px 16px calc(16px + env(safe-area-inset-bottom,0));padding:5px;border:1px solid var(--line);border-radius:999px;background:rgba(8,18,34,.9);flex:none}
+.bar input{flex:1;min-width:0;background:none;border:0;color:var(--text);font:inherit;font-size:15px;padding:10px 8px;outline:none}
+.bar input::placeholder{color:#6f8599}
+.rb2{width:42px;height:42px;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.rb2 svg{width:20px;height:20px;fill:currentColor}
+.rb2.mic{background:rgba(46,230,255,.08);color:var(--ac);border:1px solid var(--line)}
+.rb2.send{background:var(--ac);color:#04141c;transition:background .3s}
+
+/* voice overlay */
+#voice{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;
+  opacity:0;pointer-events:none;transition:opacity .3s;max-width:720px;margin:0 auto}
+#voice.on{opacity:1;pointer-events:auto}
+#orbB{width:min(64vw,250px);height:min(64vw,250px)}
+#vst{font-size:14px;color:var(--ac);letter-spacing:.6px;transition:color .3s}
+#vtx{font-size:18px;text-align:center;min-height:50px;max-width:90%;line-height:1.4}
+#vrep{font-size:14px;text-align:center;color:var(--mute);max-height:96px;overflow-y:auto;max-width:90%;line-height:1.5}
+.wave{display:none;gap:4px;height:26px;align-items:center}
+body.listen .wave{display:flex}
+.wave i{width:4px;background:var(--ac);border-radius:3px;animation:wv .9s ease-in-out infinite}
+.wave i:nth-child(1){height:10px}.wave i:nth-child(2){height:22px;animation-delay:.1s}.wave i:nth-child(3){height:16px;animation-delay:.2s}.wave i:nth-child(4){height:24px;animation-delay:.3s}.wave i:nth-child(5){height:12px;animation-delay:.4s}
+@keyframes wv{50%{transform:scaleY(.4)}}
+#vclose{background:none;border:1px solid var(--line);color:var(--text);border-radius:999px;padding:10px 26px;font:inherit;font-size:14px;cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{animation-duration:0s!important;transition-duration:0s!important}}
 </style>
 </head>
 <body>
+<div class="glow"></div>
+<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+
 <header>
-  <h1>Jarvis<small>Personal assistant</small></h1>
+  <b>JARVIS</b>
   <div class="tools">
-    <button class="ib on" id="voiceBtn">Voice on</button>
-    <button class="ib" id="clearBtn">Clear</button>
+    <button class="tb" id="navBtn" hidden>Chat</button>
+    <button class="tb on" id="voiceBtn">Voice on</button>
+    <button class="tb" id="clearBtn">Clear</button>
   </div>
 </header>
 
-<div class="orbwrap"><div class="orb" id="orb"><i></i></div></div>
-<div class="status" id="status">Ready</div>
+<div class="orbwrap" id="orbwrap" aria-label="Tap to speak"><div class="orb" id="orbS"></div></div>
+<div class="status" id="status">System online</div>
 
-<div class="chips">
-  <button class="chip" data-c="time">Time</button>
-  <button class="chip" data-c="date">Date</button>
-  <button class="chip" data-c="weather">Weather</button>
-  <button class="chip" data-c="battery">Battery</button>
-  <button class="chip" data-c="notes">Notes</button>
-  <button class="chip" data-c="motivation">Motivation</button>
-</div>
+<main id="home">
+  <div class="cards">
+    <button class="cd" data-c="time"><small>Time</small><b id="cTime">--:--</b><span id="cDate">Loading</span></button>
+    <button class="cd" id="cardWx"><small>Weather</small><b id="cWx">--</b><span id="cWxSub">Tap to enable</span></button>
+    <button class="cd" data-c="battery"><small>Battery</small><b id="cBat">--</b><span id="cBatSub">Checking</span></button>
+    <button class="cd" data-c="notes"><small>Notes</small><b id="cNotes">0</b><span>Tap to open</span></button>
+  </div>
+  <div class="chips">
+    <button class="chip" data-c="time">Time</button>
+    <button class="chip" data-c="date">Date</button>
+    <button class="chip" data-c="weather">Weather</button>
+    <button class="chip" data-c="battery">Battery</button>
+    <button class="chip" data-c="notes">Notes</button>
+    <button class="chip" data-c="motivation">Motivation</button>
+  </div>
+  <div class="quote"><small>Quote of the day</small><span id="qod"></span></div>
+</main>
 
-<div id="chat"></div>
+<section id="chat" hidden></section>
 
 <div class="bar">
-  <button class="rb" id="mic" aria-label="Speak"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg></button>
-  <input id="inp" type="text" placeholder="Jarvis se kuch bhi pucho" autocomplete="off">
-  <button class="rb send" id="send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button>
+  <button class="rb2 mic" id="mic" aria-label="Speak"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg></button>
+  <input id="inp" type="text" placeholder="Jarvis se kuch bhi pucho..." autocomplete="off">
+  <button class="rb2 send" id="send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button>
+</div>
+
+<div id="voice" aria-live="polite">
+  <div class="orb" id="orbB"></div>
+  <div id="vst">Listening</div>
+  <div class="wave"><i></i><i></i><i></i><i></i><i></i></div>
+  <div id="vtx"></div>
+  <div id="vrep"></div>
+  <button id="vclose">Close</button>
 </div>
 
 <script>
 (function () {
-  var chat = document.getElementById('chat');
-  var inp = document.getElementById('inp');
-  var orb = document.getElementById('orb');
-  var statusEl = document.getElementById('status');
-  var micBtn = document.getElementById('mic');
-  var voiceBtn = document.getElementById('voiceBtn');
-  var history = [];
-  var voiceOn = true;
-  var busy = false;
-  var audioEl = null;
+  function $(id) { return document.getElementById(id); }
+  var ORB = '<svg viewBox="0 0 150 150" aria-hidden="true"><circle class="r0" cx="75" cy="75" r="70"/><circle class="ra" cx="75" cy="75" r="60"/><circle class="rb" cx="75" cy="75" r="48"/><circle class="rc" cx="75" cy="75" r="36"/></svg><div class="core"></div>';
+  $('orbS').innerHTML = ORB;
+  $('orbB').innerHTML = ORB;
+
+  var chat = $('chat'), home = $('home'), inp = $('inp'), statusEl = $('status');
+  var orbwrap = $('orbwrap'), micBtn = $('mic'), voiceBtn = $('voiceBtn'), navBtn = $('navBtn');
+  var voiceEl = $('voice'), vst = $('vst'), vtx = $('vtx'), vrep = $('vrep');
+  var history = [], view = 'home', voiceOn = true, busy = false;
+  var audioEl = null, speaking = false, voiceSession = false, closeTimer = null;
 
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
 
+  /* ---------- state / views ---------- */
   function setState(s, t) {
-    orb.className = 'orb' + (s ? ' ' + s : '');
-    statusEl.textContent = t || 'Ready';
-  }
-
-  function render() {
-    chat.innerHTML = '';
-    if (!history.length) {
-      var e = document.createElement('div');
-      e.className = 'empty';
-      e.textContent = 'Kuch bhi pucho ya upar se ek command chuno.';
-      chat.appendChild(e);
-      return;
+    document.body.className = s || '';
+    speaking = (s === 'speak');
+    var label = t || 'System online';
+    statusEl.textContent = label;
+    vst.textContent = (s === 'listen') ? 'Listening' : (s === 'think') ? 'Thinking' : (s === 'speak') ? 'Speaking' : label;
+    if (!s && voiceSession && !busy) {
+      clearTimeout(closeTimer);
+      closeTimer = setTimeout(closeVoice, voiceOn ? 700 : 2500);
     }
-    history.forEach(function (h) { addBubble(h.role, h.text, h.err); });
-    chat.scrollTop = chat.scrollHeight;
   }
 
+  function showView(v) {
+    view = v;
+    home.hidden = (v !== 'home');
+    chat.hidden = (v !== 'chat');
+    orbwrap.classList.toggle('compact', v === 'chat');
+    navBtn.textContent = (v === 'chat') ? 'Home' : 'Chat';
+    navBtn.hidden = (v === 'home' && history.length === 0);
+    if (v === 'chat') chat.scrollTop = chat.scrollHeight;
+  }
+
+  function openVoice() {
+    clearTimeout(closeTimer);
+    voiceSession = true;
+    vtx.textContent = '';
+    vrep.textContent = '';
+    voiceEl.classList.add('on');
+  }
+  function closeVoice() {
+    voiceSession = false;
+    voiceEl.classList.remove('on');
+  }
+
+  /* ---------- chat rendering ---------- */
   function addBubble(role, text, err) {
     var d = document.createElement('div');
     d.className = 'm ' + (role === 'user' ? 'u' : 'j') + (err ? ' err' : '');
@@ -115,35 +225,55 @@ header small{display:block;color:var(--mute);font-size:12px;font-weight:400;marg
     chat.appendChild(d);
     chat.scrollTop = chat.scrollHeight;
   }
-
+  function render() {
+    chat.innerHTML = '';
+    if (!history.length) {
+      var e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = 'Abhi koi chat nahi hai.';
+      chat.appendChild(e);
+      return;
+    }
+    history.forEach(function (h) { addBubble(h.role, h.text, h.err); });
+  }
+  function typing(on) {
+    var t = document.getElementById('typing');
+    if (on && !t) {
+      t = document.createElement('div');
+      t.id = 'typing';
+      t.className = 'm j dots';
+      t.innerHTML = '<span></span><span></span><span></span>';
+      chat.appendChild(t);
+      chat.scrollTop = chat.scrollHeight;
+    } else if (!on && t) { t.remove(); }
+  }
   function push(role, text, err) {
     if (history.length === 0) chat.innerHTML = '';
     history.push({ role: role, text: text, err: !!err });
     if (history.length > 40) history = history.slice(-40);
+    typing(false);
     addBubble(role, text, err);
     store('jarvis_chat', history);
   }
 
+  /* ---------- speech out ---------- */
   function stopAudio() {
     if (audioEl) { try { audioEl.pause(); } catch (e) {} audioEl = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
   }
-
   function browserSpeak(text) {
-    if (!window.speechSynthesis) { setState('', 'Ready'); return; }
+    if (!window.speechSynthesis) { setState('', 'System online'); return; }
     var u = new SpeechSynthesisUtterance(text);
     u.lang = 'en-IN';
     u.onstart = function () { setState('speak', 'Speaking'); };
-    u.onend = u.onerror = function () { setState('', 'Ready'); };
+    u.onend = u.onerror = function () { setState('', 'System online'); };
     window.speechSynthesis.speak(u);
   }
-
   function b64ToBytes(b64) {
     var bin = atob(b64), n = bin.length, arr = new Uint8Array(n);
     for (var i = 0; i < n; i++) arr[i] = bin.charCodeAt(i);
     return arr;
   }
-
   function pcmToWav(pcm, rate) {
     var buf = new ArrayBuffer(44 + pcm.length), v = new DataView(buf);
     function w(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
@@ -154,9 +284,8 @@ header small{display:block;color:var(--mute);font-size:12px;font-weight:400;marg
     new Uint8Array(buf, 44).set(pcm);
     return new Blob([buf], { type: 'audio/wav' });
   }
-
   function speak(text) {
-    if (!voiceOn || !text) { setState('', 'Ready'); return; }
+    if (!voiceOn || !text) { setState('', 'System online'); return; }
     stopAudio();
     fetch('/.netlify/functions/tts', {
       method: 'POST',
@@ -172,8 +301,7 @@ header small{display:block;color:var(--mute);font-size:12px;font-weight:400;marg
         var mime = j.mimeType || j.mime || 'audio/wav';
         var bytes = b64ToBytes(b64);
         if (mime.indexOf('L16') > -1 || mime.indexOf('pcm') > -1) {
-          var rate = 24000;
-          var at = mime.indexOf('rate=');
+          var rate = 24000, at = mime.indexOf('rate=');
           if (at > -1) rate = parseInt(mime.slice(at + 5), 10) || 24000;
           return pcmToWav(bytes, rate);
         }
@@ -182,40 +310,17 @@ header small{display:block;color:var(--mute);font-size:12px;font-weight:400;marg
     }).then(function (blob) {
       audioEl = new Audio(URL.createObjectURL(blob));
       audioEl.onplay = function () { setState('speak', 'Speaking'); };
-      audioEl.onended = function () { setState('', 'Ready'); };
+      audioEl.onended = function () { setState('', 'System online'); };
       return audioEl.play();
     }).catch(function () { browserSpeak(text); });
   }
-
   function reply(text, err) {
     push('jarvis', text, err);
-    if (err) setState('', 'Ready'); else speak(text);
+    vrep.textContent = text.length > 240 ? text.slice(0, 240) + '...' : text;
+    if (err) setState('', 'System online'); else speak(text);
   }
 
-  function has(t, w) { return t.indexOf(w) > -1; }
-
-  function weather() {
-    return new Promise(function (res) {
-      if (!navigator.geolocation) return res('Is device par location available nahi hai.');
-      navigator.geolocation.getCurrentPosition(function (p) {
-        var la = p.coords.latitude, lo = p.coords.longitude;
-        fetch('https://api.open-meteo.com/v1/forecast?latitude=' + la + '&longitude=' + lo + '&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m')
-          .then(function (r) { return r.json(); })
-          .then(function (j) {
-            var c = j.current;
-            res('Abhi temperature ' + c.temperature_2m + '°C hai, humidity ' + c.relative_humidity_2m + '%, hawa ' + c.wind_speed_10m + ' km/h, barish ' + c.precipitation + ' mm.');
-          }).catch(function () { res('Weather abhi nahi mil paaya. Thodi der baad try karo.'); });
-      }, function () { res('Weather ke liye location permission chahiye. Browser settings mein allow karo.'); }, { timeout: 10000 });
-    });
-  }
-
-  function battery() {
-    if (!navigator.getBattery) return Promise.resolve('Is browser mein battery info available nahi hai.');
-    return navigator.getBattery().then(function (b) {
-      return 'Battery ' + Math.round(b.level * 100) + '% hai' + (b.charging ? ', charging chal rahi hai.' : '.');
-    });
-  }
-
+  /* ---------- dashboard data ---------- */
   var quotes = [
     'Chhote steps roz lo, bada result khud banta hai.',
     'Jo aaj kaam karta hai, kal uska naam hota hai.',
@@ -223,116 +328,65 @@ header small{display:block;color:var(--mute);font-size:12px;font-weight:400;marg
     'Consistency talent se zyada door tak le jaati hai.',
     'Ek project poora karna, das idea sochne se behtar hai.'
   ];
-
-  function notes() {
-    var n = load('jarvis_notes', []);
-    if (!n.length) return 'Abhi koi note nahi hai. "note: apna text" likh kar save karo.';
-    return 'Tumhare notes:\n' + n.map(function (x, i) { return (i + 1) + '. ' + x; }).join('\n');
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function tickClock() {
+    var d = new Date();
+    $('cTime').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    $('cDate').textContent = d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' });
   }
+  function updateNotes() { $('cNotes').textContent = load('jarvis_notes', []).length; }
 
-  function local(raw) {
-    var t = raw.toLowerCase().trim();
-    if (t.indexOf('note:') === 0) {
-      var body = raw.slice(raw.indexOf(':') + 1).trim();
-      if (body) {
-        var n = load('jarvis_notes', []); n.push(body); store('jarvis_notes', n);
-        return Promise.resolve('Note save ho gaya.');
+  var wx = null;
+  function getWeather() {
+    return new Promise(function (res, rej) {
+      if (!navigator.geolocation) return rej(new Error('nogeo'));
+      navigator.geolocation.getCurrentPosition(function (p) {
+        fetch('https://api.open-meteo.com/v1/forecast?latitude=' + p.coords.latitude + '&longitude=' + p.coords.longitude + '&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m')
+          .then(function (r) { return r.json(); })
+          .then(function (j) { wx = j.current; res(wx); })
+          .catch(rej);
+      }, function () { rej(new Error('denied')); }, { timeout: 10000 });
+    });
+  }
+  function paintWeather() {
+    if (!wx) return;
+    $('cWx').textContent = Math.round(wx.temperature_2m) + '°C';
+    $('cWxSub').textContent = 'Humidity ' + wx.relative_humidity_2m + '%';
+  }
+  function loadWeatherCard() {
+    $('cWxSub').textContent = 'Loading...';
+    getWeather().then(paintWeather).catch(function () { $('cWxSub').textContent = 'Allow location'; });
+  }
+  function initWeather() {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then(function (s) {
+        if (s.state === 'granted') loadWeatherCard();
+      }).catch(function () {});
+    }
+  }
+  function initBattery() {
+    if (!navigator.getBattery) { $('cBat').textContent = 'N/A'; $('cBatSub').textContent = 'Not supported'; return; }
+    navigator.getBattery().then(function (b) {
+      function paint() {
+        $('cBat').textContent = Math.round(b.level * 100) + '%';
+        $('cBatSub').textContent = b.charging ? 'Charging' : 'On battery';
       }
-    }
-    if (t === 'clear notes' || t === 'delete notes') { store('jarvis_notes', []); return Promise.resolve('Saare notes delete ho gaye.'); }
-    if (t === 'notes' || t === 'my notes' || t === 'show notes') return Promise.resolve(notes());
-    if (t === 'time' || has(t, 'what time') || has(t, 'kitne baje') || has(t, 'time kya')) {
-      return Promise.resolve('Abhi ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + ' baj rahe hain.');
-    }
-    if (t === 'date' || has(t, 'aaj ki date') || has(t, 'today date') || has(t, 'what date') || has(t, 'aaj kya din')) {
-      return Promise.resolve('Aaj ' + new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' hai.');
-    }
-    if (has(t, 'weather') || has(t, 'mausam')) return weather();
-    if (has(t, 'battery')) return battery();
-    if (t === 'motivation' || has(t, 'motivate')) return Promise.resolve(quotes[Math.floor(Math.random() * quotes.length)]);
-    if (t.indexOf('search ') === 0) {
-      var q = raw.slice(7).trim();
-      window.open('https://www.google.com/search?q=' + encodeURIComponent(q), '_blank');
-      return Promise.resolve('Google par "' + q + '" search khol raha hoon.');
-    }
-    if (t.indexOf('maps ') === 0 || t.indexOf('map ') === 0) {
-      var p = raw.slice(raw.indexOf(' ') + 1).trim();
-      window.open('https://www.google.com/maps/search/' + encodeURIComponent(p), '_blank');
-      return Promise.resolve('Maps par "' + p + '" khol raha hoon.');
-    }
-    return null;
+      paint();
+      b.addEventListener('levelchange', paint);
+      b.addEventListener('chargingchange', paint);
+    }).catch(function () { $('cBat').textContent = 'N/A'; });
   }
 
-  function askAI(text) {
-    var past = history.slice(-11, -1).map(function (h) {
-      return { role: h.role === 'user' ? 'user' : 'model', text: h.text };
-    });
-    return fetch('/.netlify/functions/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, history: past })
-    }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (j) {
-        if (!r.ok) throw new Error(j.error || j.message || ('Server error ' + r.status));
-        return j.reply || j.text || j.answer || j.message || 'Koi jawab nahi mila.';
-      });
+  /* ---------- local commands ---------- */
+  function has(t, w) { return t.indexOf(w) > -1; }
+  function weatherText() {
+    return getWeather().then(function (c) {
+      paintWeather();
+      return 'Abhi temperature ' + c.temperature_2m + '°C hai, humidity ' + c.relative_humidity_2m + '%, hawa ' + c.wind_speed_10m + ' km/h, barish ' + c.precipitation + ' mm.';
+    }).catch(function (e) {
+      return (e && e.message === 'denied') ? 'Weather ke liye location permission chahiye. Browser settings mein allow karo.' : 'Weather abhi nahi mil paaya. Thodi der baad try karo.';
     });
   }
-
-  function handle(text) {
-    text = (text || '').trim();
-    if (!text || busy) return;
-    busy = true;
-    stopAudio();
-    inp.value = '';
-    push('user', text);
-    setState('think', 'Soch raha hoon');
-    var l = local(text);
-    var p = l || askAI(text);
-    p.then(function (ans) { reply(ans, false); })
-     .catch(function (e) { reply('Error: ' + (e && e.message ? e.message : 'kuch galat hua') + '. Dobara try karo.', true); })
-     .then(function () { busy = false; });
-  }
-
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var rec = null, listening = false;
-  if (SR) {
-    rec = new SR();
-    rec.lang = 'en-IN';
-    rec.interimResults = false;
-    rec.onresult = function (e) { handle(e.results[0][0].transcript); };
-    rec.onend = function () { listening = false; micBtn.classList.remove('rec'); if (!busy) setState('', 'Ready'); };
-    rec.onerror = function () { listening = false; micBtn.classList.remove('rec'); setState('', 'Mic kaam nahi kar raha. Permission check karo.'); };
-  }
-  micBtn.onclick = function () {
-    if (!rec) { setState('', 'Is browser mein mic support nahi hai.'); return; }
-    if (listening) { rec.stop(); return; }
-    stopAudio();
-    try { rec.start(); listening = true; micBtn.classList.add('rec'); setState('listen', 'Sun raha hoon'); } catch (e) {}
-  };
-
-  document.getElementById('send').onclick = function () { handle(inp.value); };
-  inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') handle(inp.value); });
-  Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (c) {
-    c.onclick = function () { handle(c.getAttribute('data-c')); };
-  });
-  voiceBtn.onclick = function () {
-    voiceOn = !voiceOn;
-    voiceBtn.textContent = voiceOn ? 'Voice on' : 'Voice off';
-    voiceBtn.classList.toggle('on', voiceOn);
-    if (!voiceOn) { stopAudio(); setState('', 'Ready'); }
-    store('jarvis_voice', voiceOn);
-  };
-  document.getElementById('clearBtn').onclick = function () {
-    stopAudio(); history = []; store('jarvis_chat', []); render(); setState('', 'Ready');
-  };
-
-  voiceOn = load('jarvis_voice', true);
-  voiceBtn.textContent = voiceOn ? 'Voice on' : 'Voice off';
-  voiceBtn.classList.toggle('on', voiceOn);
-  history = load('jarvis_chat', []);
-  render();
-})();
-</script>
-</body>
-</html>
+  function batteryText() {
+    if (!navigator.getBattery) return Promise.resolve('Is browser mein battery info available nahi hai.');
+    return navigator
